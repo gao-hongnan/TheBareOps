@@ -40,13 +40,13 @@ class Environment(BaseModel):
         description="BigQuery Raw Table Name",
     )
 
-    bigquery_processed_dataset: Optional[str] = Field(
-        default=os.getenv("BIGQUERY_PROCESSED_DATASET"),
+    bigquery_transformed_dataset: Optional[str] = Field(
+        default=os.getenv("BIGQUERY_TRANSFORMED_DATASET"),
         description="BigQuery Processed Dataset",
     )
 
-    bigquery_processed_table_name: Optional[str] = Field(
-        default=os.getenv("BIGQUERY_PROCESSED_TABLE_NAME"),
+    bigquery_transformed_table_name: Optional[str] = Field(
+        default=os.getenv("BIGQUERY_TRANSFORMED_TABLE"),
         description="BigQuery Processed Table Name",
     )
 
@@ -62,8 +62,8 @@ class Environment(BaseModel):
             gcs_bucket_project_name=os.getenv("GCS_BUCKET_PROJECT_NAME"),
             bigquery_raw_dataset=os.getenv("BIGQUERY_RAW_DATASET"),
             bigquery_raw_table_name=os.getenv("BIGQUERY_RAW_TABLE_NAME"),
-            bigquery_processed_dataset=os.getenv("BIGQUERY_PROCESSED_DATASET"),
-            bigquery_processed_table_name=os.getenv("BIGQUERY_PROCESSED_TABLE_NAME"),
+            bigquery_transformed_dataset=os.getenv("BIGQUERY_TRANSFORMED_DATASET"),
+            bigquery_transformed_table_name=os.getenv("BIGQUERY_TRANSFORMED_TABLE"),
         )
 
     class Config:

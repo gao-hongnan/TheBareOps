@@ -1,6 +1,6 @@
 import math
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, List
 
 import pandas as pd
 import requests
@@ -59,6 +59,7 @@ def handle_response(data: list, response_columns: list):
 
 def from_api(
     metadata: Metadata,
+    response_columns: List[str],
     symbol: str,
     start_time: int,
     end_time: Optional[int] = None,
@@ -79,21 +80,6 @@ def from_api(
     end_iteration = start_time + request_max
 
     params = prepare_params(symbol, interval, start_time, limit, end_time)
-
-    response_columns = [
-        "open_time",
-        "open",
-        "high",
-        "low",
-        "close",
-        "volume",
-        "close_time",
-        "quote_asset_volume",
-        "number_of_trades",
-        "taker_buy_base_asset_volume",
-        "taker_buy_quote_asset_volume",
-        "ignore",
-    ]
 
     if time_range <= request_max:  # time range selected within 1000 rows limit
         data = execute_request(url=url, params=params)

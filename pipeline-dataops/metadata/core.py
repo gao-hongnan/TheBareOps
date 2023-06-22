@@ -36,34 +36,7 @@ class Metadata:
         default_factory=lambda: datetime.now(pytz.timezone("Asia/Singapore"))
     )
 
-    # validate_raw
-    raw_validation_dict: Dict[str, Any] = None
-
-    # inside load.py
-    raw_file_size: int = None
-    raw_file_format: str = None
-    raw_dvc_metadata: Dict[str, Any] = None
-
-    # inside transform.py
-    processed_df: pd.DataFrame = None
-    processed_num_rows: int = None
-    processed_num_cols: int = None
-    processed_file_size: int = None
-    processed_dvc_metadata: Dict[str, Any] = None
-
-    # inside resampling.py
-    X_train: pd.DataFrame = None
-    X_test: pd.DataFrame = None
-    X_val: pd.DataFrame = None
-    y_train: pd.DataFrame = None
-    y_test: pd.DataFrame = None
-    y_val: pd.DataFrame = None
-
-    # inside train.py
-    model_artifacts: Dict[str, Any] = None
-
-    # inside evaluate.py
-    best_params: Dict[str, Any] = None
+    transformed_df: pd.DataFrame = None
 
     def release(self, attribute: str) -> Any:
         self.__setattr__(attribute, None)
