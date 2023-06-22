@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import unittest
 from typing import Literal, Optional, Type
 
 import rich
@@ -39,6 +40,16 @@ class Environment(BaseModel):
         description="BigQuery Raw Table Name",
     )
 
+    bigquery_processed_dataset: Optional[str] = Field(
+        default=os.getenv("BIGQUERY_PROCESSED_DATASET"),
+        description="BigQuery Processed Dataset",
+    )
+
+    bigquery_processed_table_name: Optional[str] = Field(
+        default=os.getenv("BIGQUERY_PROCESSED_TABLE_NAME"),
+        description="BigQuery Processed Table Name",
+    )
+
     @classmethod
     def create_instance(cls: Type[Environment]) -> Environment:
         if not is_docker():
@@ -51,9 +62,18 @@ class Environment(BaseModel):
             gcs_bucket_project_name=os.getenv("GCS_BUCKET_PROJECT_NAME"),
             bigquery_raw_dataset=os.getenv("BIGQUERY_RAW_DATASET"),
             bigquery_raw_table_name=os.getenv("BIGQUERY_RAW_TABLE_NAME"),
+            bigquery_processed_dataset=os.getenv("BIGQUERY_PROCESSED_DATASET"),
+            bigquery_processed_table_name=os.getenv("BIGQUERY_PROCESSED_TABLE_NAME"),
         )
+
+    class Config:
+        frozen: bool = True
 
 
 if __name__ == "__main__":
     env = Environment.create_instance()
     rich.print(env)
+
+    # # raise error test that it can be mutated with frozen
+    # with unittest.TestCase.assertRaises(unittest.TestCase, AttributeError):
+    #     env.project_id = "test"

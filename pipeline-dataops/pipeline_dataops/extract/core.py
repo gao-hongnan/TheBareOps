@@ -4,10 +4,61 @@ from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 import requests
-from mlops_pipeline_feature_v1.utils import interval_to_milliseconds
+
+from metadata.core import Metadata
+
+
+def interval_to_milliseconds(interval: str) -> int:
+    if interval.endswith("m"):
+        return int(interval[:-1]) * 60 * 1000
+    elif interval.endswith("h"):
+        return int(interval[:-1]) * 60 * 60 * 1000
+    elif interval.endswith("d"):
+        return int(interval[:-1]) * 24 * 60 * 60 * 1000
+    else:
+        raise ValueError(f"Invalid interval format: {interval}")
+
+
+def get_url(base_url: str, endpoint: str) -> str:
+    return base_url + endpoint
+
+
+# Create a function to prepare the parameters for the request.
+def prepare_params(
+    symbol: str,
+    interval: str,
+    start_time: int,
+    limit: int,
+    end_time: Optional[int] = None,
+):
+    params = {
+        "symbol": symbol,
+        "interval": interval,
+        "limit": limit,
+        "startTime": start_time,
+    }
+
+    if end_time is not None:
+        params["endTime"] = end_time
+
+    return params
+
+
+# Create a function to execute the request.
+def execute_request(url: str, params: dict):
+    resp = requests.get(url=url, params=params, timeout=30)
+    data = resp.json()
+    return data
+
+
+# Create a function to handle the response and convert it into a DataFrame.
+def handle_response(data: list, response_columns: list):
+    df = pd.DataFrame(data, columns=response_columns)
+    return df
 
 
 def from_api(
+    metadata: Metadata,
     symbol: str,
     start_time: int,
     end_time: Optional[int] = None,
@@ -16,7 +67,7 @@ def from_api(
     base_url: str = "https://api.binance.com",
     endpoint: str = "/api/v3/klines",
 ) -> Optional[Tuple[pd.DataFrame, Dict[str, Any]]]:
-    url = base_url + endpoint
+    url = get_url(base_url, endpoint)
 
     # Convert interval to milliseconds
     interval_in_milliseconds = interval_to_milliseconds(interval)
@@ -27,15 +78,7 @@ def from_api(
     start_iteration = start_time
     end_iteration = start_time + request_max
 
-    params = {
-        "symbol": symbol,
-        "interval": interval,
-        "limit": limit,
-        "startTime": start_time,
-    }
-
-    if end_time is not None:
-        params["endTime"] = end_time
+    params = prepare_params(symbol, interval, start_time, limit, end_time)
 
     response_columns = [
         "open_time",
@@ -53,9 +96,8 @@ def from_api(
     ]
 
     if time_range <= request_max:  # time range selected within 1000 rows limit
-        resp = requests.get(url=url, params=params, timeout=30)
-        data = resp.json()
-        df = pd.DataFrame(data, columns=response_columns)
+        data = execute_request(url=url, params=params)
+        df = handle_response(data, response_columns)
         time.sleep(1)
     elif (
         time_range > request_max
@@ -67,7 +109,7 @@ def from_api(
             # make request with updated params
             resp = requests.get(url=url, params=params, timeout=30)
             data = resp.json()
-            _df = pd.DataFrame(data, columns=response_columns)
+            _df = handle_response(data, response_columns)
 
             df = pd.concat([df, _df])
 
@@ -86,7 +128,7 @@ def from_api(
     df.insert(0, "utc_datetime", pd.to_datetime(df["open_time"], unit="ms"))
 
     # prepare metadata
-    metadata = {
+    metadata_dict = {
         "symbol": symbol,
         "interval": interval,
         "limit": limit,
@@ -95,5 +137,8 @@ def from_api(
         "base_url": base_url,
         "endpoint": endpoint,
         "exported_at_utc": pd.Timestamp.now(tz="UTC").isoformat(),
+        "raw_df": df,
     }
-    return df, metadata
+    metadata.set_attrs(metadata_dict)
+
+    return metadata
