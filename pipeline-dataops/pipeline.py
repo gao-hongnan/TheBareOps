@@ -20,6 +20,8 @@ from pipeline_dataops.transform.core import cast_columns
 # 2. If you run elt and fail at transform, the next time you run it, it will
 #    have a gap. Try to purposely fail at transform and see what happens.
 class Pipeline:
+    """Pipeline class that handles the entire ELT process."""
+
     def __init__(
         self,
         cfg: Config,
