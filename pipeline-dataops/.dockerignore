@@ -6,8 +6,6 @@
 **/*.egg-info
 .DS_Store
 .gitignore
-*.md
-*.txt
 .tmp*
 *.pyc
 *.pyo
