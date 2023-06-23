@@ -1,11 +1,19 @@
 ARG PYTHON_VERSION=3.9
-ARG CONTEXT_DIR=pipeline-dataops
+ARG CONTEXT_DIR=.
+ARG HOME_DIR=/pipeline-dataops
+ARG VENV_DIR=/opt
+ARG VENV_NAME=venv
 
 # Base image
 FROM python:${PYTHON_VERSION}-slim-buster as builder
 
+ARG CONTEXT_DIR
+ARG HOME_DIR
+ARG VENV_DIR
+ARG VENV_NAME
+
 # Set work directory to /pipeline-dataops
-WORKDIR /pipeline-dataops
+WORKDIR ${HOME_DIR}
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -13,8 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev && \
     rm -rf /var/lib/apt/lists/*
 
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+RUN python -m venv ${VENV_DIR}/${VENV_NAME}
+ENV PATH="${VENV_DIR}/${VENV_NAME}/bin:$PATH"
 
 # Copy only requirements, to cache them in docker layer
 ARG REQUIREMENTS=requirements.txt
@@ -31,29 +39,29 @@ RUN python3 -m pip install --upgrade pip && \
 # This is the real runner for my app
 FROM python:${PYTHON_VERSION}-slim-buster as runner
 
-ARG CONTEXT_DIR=pipeline-dataops
-
-# Install cron
-RUN apt-get update && apt-get install -y cron
+ARG CONTEXT_DIR
+ARG HOME_DIR
+ARG VENV_DIR
+ARG VENV_NAME
 
 # Copy from builder image
-COPY --from=builder /opt/venv /opt/venv
-COPY --from=builder /pipeline-dataops /pipeline-dataops
+COPY --from=builder ${VENV_DIR}/${VENV_NAME} ${VENV_DIR}/${VENV_NAME}
+COPY --from=builder ${HOME_DIR} ${HOME_DIR}
 
 # Set work dir again to the pipeline_training subdirectory
 # Set the working directory inside the Docker container
-WORKDIR /pipeline-dataops
+WORKDIR ${HOME_DIR}
 
-ENV PATH="/opt/venv/bin:$PATH"
+ENV PATH="${VENV_DIR}/${VENV_NAME}/bin:$PATH"
 
 # set git commit env
 ARG GIT_COMMIT_HASH
 ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
 
-# Copy the rest of the application
-# COPY .env .env
-COPY ${CONTEXT_DIR}/conf /pipeline-dataops/conf
-COPY ${CONTEXT_DIR}/gcp-storage-service-account.json /pipeline-dataops/gcp-storage-service-account.json
-COPY ${CONTEXT_DIR}/pipeline_training /pipeline-dataops/pipeline_training
+# Copy the rest of the application's code
+COPY ${CONTEXT_DIR}/conf ${HOME_DIR}/conf
+COPY ${CONTEXT_DIR}/metadata ${HOME_DIR}/metadata
+COPY ${CONTEXT_DIR}/gcp-storage-service-account.json ${HOME_DIR}/gcp-storage-service-account.json
+COPY ${CONTEXT_DIR}/pipeline_dataops ${HOME_DIR}/pipeline_dataops
 
-CMD ["python", "-m", "pipeline_training.pipeline"]
+CMD ["python", "-m", "pipeline"]

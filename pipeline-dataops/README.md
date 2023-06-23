@@ -53,3 +53,14 @@ bash make_venv.sh venv --pyproject --dev && \
 rm make_venv.sh && \
 source venv/bin/activate
 ```
+
+## Docker
+
+### Multi-Stage Build
+
+**Consider putting in my docs**.
+
+1. https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact tells
+  us how `ARG` works if declared before `FROM` and after `FROM`.
+2. `ENV PATH="${VENV_DIR}/${VENV_NAME}/bin:$PATH"` is needed to make the virtual environment
+  available in the container.
