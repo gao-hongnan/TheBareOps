@@ -22,6 +22,9 @@ jobs:
       HOME_DIR: ${{ secrets.HOME_DIR }}
       REPO_NAME: ${{ secrets.GOOGLE_ARTIFACTS_REGISTRY_REPO_NAME }}  # Set this to your Artifact Registry repository name
       REGION: ${{ secrets.REGION }}  # Set this to your Artifact Registry region
+      GIT_COMMIT_HASH: ${{ github.sha }}
+      IMAGE_NAME: pipeline-dataops  # Define IMAGE_NAME here
+      IMAGE_TAG: ${{ github.sha ::8 }}  # Define IMAGE_TAG here
 
     steps:
     - name: Checkout code
@@ -51,20 +54,17 @@ jobs:
       run: |
         echo "Building Docker image..."
         cd pipeline-dataops
-        export IMAGE_NAME=pipeline-dataops
-        export IMAGE_TAG=${GITHUB_SHA::8}  # Gets the short SHA, first 8 characters
         docker build \
-        --build-arg GIT_COMMIT_HASH=${GITHUB_SHA::8} \
+        --build-arg GIT_COMMIT_HASH=${IMAGE_TAG} \
         -f Dockerfile \
-        -t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/$IMAGE_NAME:$IMAGE_TAG" \
+        -t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${IMAGE_TAG}" \
         .
 
     - name: Push Docker image to Google Artifact Registry
       run: |
         echo "Pushing Docker image..."
         docker push \
-        "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/$IMAGE_NAME:${GITHUB_SHA::8}"
-        echo "Docker image built and pushed to Google Artifact Registry"
+        "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${IMAGE_TAG}"
 
     # - name: Deploy to Cloud Run
     #   run: |

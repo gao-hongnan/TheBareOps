@@ -56,10 +56,6 @@ source venv/bin/activate
 
 ## Containerization
 
-We use Docker to containerize our code.
-
-### Good Practices
-
 #### Tagging Image with Git Commit Hash
 
 Tagging the image with the commit hash of the code used to build the image.
@@ -68,9 +64,7 @@ Tagging the image with the commit hash of the code used to build the image.
 
 **Consider putting in my docs**.
 
-1. <https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact>
-   tells us how `ARG` works if declared before `FROM` and after `FROM`.
-
+1.
 #### PATH
 
 2. `ENV PATH="${VENV_DIR}/${VENV_NAME}/bin:$PATH"` is needed to make the virtual

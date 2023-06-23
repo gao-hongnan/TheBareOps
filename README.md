@@ -60,6 +60,24 @@ separate GitHub Actions environment variable in your repository.
 This way, you can manage your GitHub secrets and environment variables directly
 from your terminal, improving your workflow's efficiency.
 
+## Containerization
+
+We will leverage Docker to containerize our application. For a comprehensive
+understanding of Docker, please refer to this
+[**detailed guide**](https://gao-hongnan.github.io/gaohn-mlops-docs/machine_learning_system_design/modern_tech_stacks/containerization/docker/concept/).
+
+Just as producing high-quality code is essential, crafting well-structured
+Dockerfiles is equally crucial. You can find a dedicated section on Dockerfile
+best practices
+[**here**](https://gao-hongnan.github.io/gaohn-mlops-docs/machine_learning_system_design/modern_tech_stacks/containerization/docker/concept/#docker-best-practices).
+
+### Common Best Practices
+
+1. Use a `.dockerignore` file to exclude files and directories from the build
+   context.
+2. Use multi-stage builds to keep the final image small and secure.
+3. Use git commit hashes as tags for your images.
+
 ## MLOps
 
 ### Promoter
