@@ -5,7 +5,7 @@
 outputs/
 
 # secrets
-gcp-storage-service-account.json
+gcp-storage-service-account.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

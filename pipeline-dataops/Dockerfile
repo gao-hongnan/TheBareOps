@@ -16,7 +16,8 @@ ARG VENV_NAME
 WORKDIR ${HOME_DIR}
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     build-essential \
     python3-dev && \
     rm -rf /var/lib/apt/lists/*
@@ -61,7 +62,10 @@ ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
 # Copy the rest of the application's code
 COPY ${CONTEXT_DIR}/conf ${HOME_DIR}/conf
 COPY ${CONTEXT_DIR}/metadata ${HOME_DIR}/metadata
-COPY ${CONTEXT_DIR}/gcp-storage-service-account.json ${HOME_DIR}/gcp-storage-service-account.json
 COPY ${CONTEXT_DIR}/pipeline_dataops ${HOME_DIR}/pipeline_dataops
+COPY ${CONTEXT_DIR}/pipeline.py ${HOME_DIR}/pipeline.py
+COPY ${CONTEXT_DIR}/scripts/docker/entrypoint.sh ${HOME_DIR}/scripts/docker/entrypoint.sh
 
-CMD ["python", "-m", "pipeline"]
+RUN chmod -R +x ${HOME_DIR}/scripts/docker
+
+CMD ["scripts/docker/entrypoint.sh"]
