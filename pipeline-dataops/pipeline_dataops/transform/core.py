@@ -13,8 +13,11 @@ def cast_columns(
 ) -> pd.DataFrame:
     df = df.copy()
 
+    # TODO: Consider adding this to great expectations
+    df[datetime_column] = pd.to_datetime(df[datetime_column], unit="ms")
+
     df[timezone_column] = (
-        df[datetime_column].dt.tz_localize(timezone).dt.tz_convert(timezone)
+        df[datetime_column].dt.tz_localize("UTC").dt.tz_convert(timezone)
     )
 
     for int_time_col in int_time_columns:

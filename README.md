@@ -1,15 +1,84 @@
-# MLOps
+# The BareOps
 
-## Promoter
+## Set GitHub Secrets and Variables from the Command Line
 
+This guide provides instructions on how to set GitHub secrets and GitHub Actions
+environment variables from the command line.
 
-Indeed, comparing the newly trained model with the currently deployed model (often referred to as the "champion" model) is a common practice in many production settings. This is typically done by evaluating both models on the same validation dataset and comparing their performance metrics.
+**GitHub secrets** are encrypted environment variables securely stored in your
+repository settings. They're not shown in logs or to public forks and used for
+storing sensitive information such as API keys or credentials.
 
-The MlflowClient provides a method get_model_version that you can use to retrieve details about a specific version of a registered model, including its metrics. If you've logged your model's performance metrics during training, you can retrieve these metrics and compare them with the performance of your new model.
+**GitHub Actions environment variables** are stored in plaintext and are visible
+in logs. These are used for storing non-sensitive information, like system paths
+or feature flags.
 
-Here's a simple example of how you might compare the new model to the currently deployed model:
+### Setting GitHub Secrets
 
+To set secrets in bulk, use a file with each line corresponding to a secret in
+the format `SECRET_NAME=SECRET_VALUE`. This file can be named as you see fit,
+but for this example, we'll call it `.env.github`.
+
+Execute the following command:
+
+```bash
+ENV_FILE=.env.github
+gh secret set -f $ENV_FILE
 ```
+
+This command will read each line from `ENV_FILE` and set them as separate
+secrets in your repository.
+
+To set an individual secret, such as the contents of a JSON file, use the `-b`
+flag to provide the secret's body. The content of the JSON file needs to be
+passed as a string to the command. Be careful as the terminal treats the JSON
+content as a string and may cause errors if not properly formatted.
+
+```bash
+JSON_CONTENT=$(cat ~/path_to_your_file/gcp-storage-service-account.json)
+SECRET_NAME=GOOGLE_SERVICE_ACCOUNT_KEY
+gh secret set $SECRET_NAME -b '$JSON_CONTENT'
+```
+
+### Setting GitHub Actions Environment Variables
+
+In a similar fashion, you can set GitHub Actions environment variables in bulk
+using a file with each line corresponding to a variable in the format
+`VARIABLE_NAME=VARIABLE_VALUE`. This file can be named as you see fit, but for
+this example, we'll call it `.env.github.variables`.
+
+Use the following command:
+
+```bash
+ENV_FILE=.env.github.variables
+gh variable set -f $ENV_FILE
+```
+
+This command will read the `ENV_FILE` and set each line in the file as a
+separate GitHub Actions environment variable in your repository.
+
+This way, you can manage your GitHub secrets and environment variables directly
+from your terminal, improving your workflow's efficiency.
+
+## MLOps
+
+### Promoter
+
+Indeed, comparing the newly trained model with the currently deployed model
+(often referred to as the "champion" model) is a common practice in many
+production settings. This is typically done by evaluating both models on the
+same validation dataset and comparing their performance metrics.
+
+The MlflowClient provides a method get_model_version that you can use to
+retrieve details about a specific version of a registered model, including its
+metrics. If you've logged your model's performance metrics during training, you
+can retrieve these metrics and compare them with the performance of your new
+model.
+
+Here's a simple example of how you might compare the new model to the currently
+deployed model:
+
+```python
 def get_production_model_performance(model_name):
     client = MlflowClient()
     production_model = client.get_latest_versions(model_name, stages=["Production"])[0]
@@ -42,6 +111,7 @@ def promote_model_to_production(model_name, new_model_metrics, new_model_version
 promote_model_to_production("imdb", new_model_metrics, model_version.version)
 ```
 
+```tree
 promote_model_to_production
 |
 |---> if no model in production
@@ -57,3 +127,4 @@ promote_model_to_production
                 ----> if new model is better
                         |
                         ----> transition_model_to_production (deploy new model)
+```

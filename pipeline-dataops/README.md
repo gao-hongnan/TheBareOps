@@ -68,13 +68,13 @@ Tagging the image with the commit hash of the code used to build the image.
 
 **Consider putting in my docs**.
 
-1. https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact tells
-  us how `ARG` works if declared before `FROM` and after `FROM`.
+1. <https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact>
+   tells us how `ARG` works if declared before `FROM` and after `FROM`.
 
 #### PATH
 
-2. `ENV PATH="${VENV_DIR}/${VENV_NAME}/bin:$PATH"` is needed to make the virtual environment
-  available in the container.
+2. `ENV PATH="${VENV_DIR}/${VENV_NAME}/bin:$PATH"` is needed to make the virtual
+   environment available in the container.
 
 #### Secrets
 
@@ -84,7 +84,8 @@ Tagging the image with the commit hash of the code used to build the image.
 ❯ base64 -i ~/gcp-storage-service-account.json -o gcp-storage-service-account.txt
 ```
 
-Copy this string to Github secrets or Kubernetes secrets depending on where you are deploying.
+Copy this string to Github secrets or Kubernetes secrets depending on where you
+are deploying.
 
 2. Decode the JSON file
 
@@ -106,7 +107,8 @@ docker build \
 .
 ```
 
-Add `--platform linux/amd64` if you are building on a M1 Mac and want to push to GCR.
+Add `--platform linux/amd64` if you are building on a M1 Mac and want to push to
+GCR.
 
 ### Run Docker Image Locally
 
@@ -126,17 +128,40 @@ export IMAGE_NAME=pipeline-dataops && \
 export IMAGE_TAG=$GIT_COMMIT_HASH && \
 export GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=$(base64 -i gcp-storage-service-account.json)
 docker run -it \
+  --rm \
   --env PROJECT_ID="gao-hongnan" \
   --env GOOGLE_APPLICATION_CREDENTIALS="${HOME_DIR}/gcp-storage-service-account.json" \
   --env GOOGLE_APPLICATION_CREDENTIALS_JSON=$GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64 \
   --env GCS_BUCKET_NAME="gaohn" \
-  --env GCS_BUCKET_PROJECT_NAME="imdb" \
+  --env GCS_BUCKET_PROJECT_NAME="" \
   --env BIGQUERY_RAW_DATASET=thebareops_production \
   --env BIGQUERY_RAW_TABLE_NAME=raw_binance_btcusdt_spot \
   --env BIGQUERY_TRANSFORMED_DATASET=thebareops_production \
   --env BIGQUERY_TRANSFORMED_TABLE=processed_binance_btcusdt_spot \
+  --name $IMAGE_NAME \
   $IMAGE_NAME:$IMAGE_TAG
 
 
 docker exec -it <CONTAINER> /bin/bash
 ```
+
+## DataOPs
+
+- Extract data from source
+- Load to staging GCS
+  - The format is `dataset/table_name/created_at=YYYY-MM-DD:HH:MM:SS:MS` so
+        that we can always find out which csv corresponds to which date in
+        bigquery.
+- Load to staging BigQuery
+  - Write and Append mode! Incremental refresh
+  - Added metadata such as `created_at` and `updated_at`
+  - Bigquery has not so good primary key, ensure no duplicate in transforms
+        step.
+  - Add column coin type symbol in transform
+  - TODO: use pydantic schema for data validation and creation.
+- Transform data
+- Load to production GCS
+- Load to production BigQuery
+- Query data from production BigQuery
+  - This is the data that will be used for training and inference
+  - Need to dvc here if possible

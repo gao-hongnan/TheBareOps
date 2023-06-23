@@ -4,6 +4,9 @@
 # ouputs
 outputs/
 
+# tmp
+tmp.*
+
 # secrets
 gcp-storage-service-account.json
 
@@ -131,6 +134,7 @@ celerybeat.pid
 # Environments
 .env
 .env.docker
+.env.github
 .secrets
 secrets.*
 .venv

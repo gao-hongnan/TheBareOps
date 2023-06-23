@@ -31,10 +31,16 @@ def test_cast_columns(
         float_columns,
     )
     # check timezone conversion
-    assert (
-        result_df[timezone_column]
-        == sample_df[datetime_column].dt.tz_localize("UTC").dt.tz_convert(timezone)
-    ).all()
+    expected = pd.Series(
+        pd.to_datetime(
+            ["2023-06-23 08:00:00", "2023-06-23 08:01:00", "2023-06-23 08:02:00"],
+            format="%Y-%m-%d %H:%M:%S",
+        ).tz_localize("Asia/Singapore")
+    )
+    assert (result_df[timezone_column] == expected).all()
+
+    # check timezone conversion
+    # pd.testing.assert_series_equal(result_df[timezone_column], expected)
 
     # check integer to datetime conversion
     for col in int_time_columns:
