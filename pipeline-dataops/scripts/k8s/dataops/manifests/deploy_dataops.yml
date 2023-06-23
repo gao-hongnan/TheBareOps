@@ -1,0 +1,23 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: dataops-cronjob
+spec:
+  schedule: "*/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: dataops
+              image: us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:your-image-tag
+              env:
+                - name: PROJECT_ID
+                  value: "your-project-id"
+                - name: GOOGLE_APPLICATION_CREDENTIALS
+                  value: /var/secrets/google/key.json
+          volumes:
+            - name: google-cloud-key
+              secret:
+                secretName: google-cloud-key
+          restartPolicy: OnFailure

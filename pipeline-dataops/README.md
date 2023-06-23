@@ -56,10 +56,7 @@ source venv/bin/activate
 
 ## Containerization
 
-
-
-
-#### Secrets
+### Secrets
 
 1. Encode the JSON file
 
@@ -96,15 +93,6 @@ GCR.
 ### Run Docker Image Locally
 
 ```bash
-docker run -it \
-    --env PROJECT_ID="${PROJECT_ID}" \
-    --env GOOGLE_APPLICATION_CREDENTIALS="${GOOGLE_APPLICATION_CREDENTIALS}" \
-    --env GCS_BUCKET_NAME="${GCS_BUCKET_NAME}" \
-    --env GCS_BUCKET_PROJECT_NAME="${GCS_BUCKET_PROJECT_NAME}" \
-    --env BIGQUERY_RAW_DATASET="${BIGQUERY_RAW_DATASET}" \
-    --env BIGQUERY_RAW_TABLE_NAME="${BIGQUERY_RAW_TABLE_NAME}" \
-    pipeline-training:${GIT_COMMIT_HASH}
-
 export GIT_COMMIT_HASH=$(git rev-parse --short HEAD) && \
 export HOME_DIR=/pipeline-dataops && \
 export IMAGE_NAME=pipeline-dataops && \
@@ -123,9 +111,35 @@ docker run -it \
   --env BIGQUERY_TRANSFORMED_TABLE=processed_binance_btcusdt_spot \
   --name $IMAGE_NAME \
   $IMAGE_NAME:$IMAGE_TAG
+```
 
+### Pull and Test Run Locally
 
-docker exec -it <CONTAINER> /bin/bash
+```bash
+export GIT_COMMIT_HASH=$(git rev-parse HEAD) && \
+docker pull \
+    us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:$GIT_COMMIT_HASH
+```
+
+```bash
+export GIT_COMMIT_HASH=$(git rev-parse HEAD) && \
+export HOME_DIR=/pipeline-dataops && \
+export IMAGE_NAME=pipeline-dataops && \
+export IMAGE_TAG=$GIT_COMMIT_HASH && \
+export GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=$(base64 -i gcp-storage-service-account.json)
+docker run -it \
+  --rm \
+  --env PROJECT_ID="gao-hongnan" \
+  --env GOOGLE_APPLICATION_CREDENTIALS="${HOME_DIR}/gcp-storage-service-account.json" \
+  --env GOOGLE_APPLICATION_CREDENTIALS_JSON=$GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64 \
+  --env GCS_BUCKET_NAME="gaohn" \
+  --env GCS_BUCKET_PROJECT_NAME="" \
+  --env BIGQUERY_RAW_DATASET=thebareops_production \
+  --env BIGQUERY_RAW_TABLE_NAME=raw_binance_btcusdt_spot \
+  --env BIGQUERY_TRANSFORMED_DATASET=thebareops_production \
+  --env BIGQUERY_TRANSFORMED_TABLE=processed_binance_btcusdt_spot \
+  --name $IMAGE_NAME \
+  us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:$IMAGE_TAG
 ```
 
 ## DataOPs

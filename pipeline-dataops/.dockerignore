@@ -1,0 +1,15 @@
+**/.DS_Store
+**/.pytest_cache
+**/.git
+**/.github
+**/venv
+**/*.egg-info
+.DS_Store
+.gitignore
+*.md
+*.txt
+.tmp*
+*.pyc
+*.pyo
+*.pyd
+__pycache__
