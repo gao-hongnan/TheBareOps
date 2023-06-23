@@ -78,6 +78,55 @@ best practices
 2. Use multi-stage builds to keep the final image small and secure.
 3. Use git commit hashes as tags for your images.
 
+## Kubernetes
+
+### Set Kubernetes Secrets from the Command Line
+
+This guide provides instructions on how to set Kubernetes secrets from the
+command line.
+
+**Kubernetes Secrets** are objects that let you store and manage sensitive
+information, such as passwords, OAuth tokens, and ssh keys. Storing confidential
+information in a Secret is safer and more flexible than putting it verbatim in a
+Pod definition or in a container image.
+
+#### Setting Kubernetes Secrets
+
+To set secrets in bulk, use an environment file with each line corresponding to
+a secret in the format `SECRET_NAME=SECRET_VALUE`. This file can be named as you
+see fit, but for this example, we'll call it `.env.k8s`.
+
+Execute the following command:
+
+```bash
+ENV_FILE=.env.k8s
+NAME=pipeline-dataops-secret # Name of the secret
+kubectl create secret generic $NAME --from-env-file=$ENV_FILE
+```
+
+This command will read each line from the environment file and set them as
+separate secrets in your Kubernetes namespace.
+
+To know more about what the command does, you can run
+the following commands to see the documentation.
+
+```bash
+kubectl create secret --help
+kubectl create secret generic --help
+```
+
+If you want to set an individual secret, use the following command:
+
+```bash
+kubectl create secret generic my-secret --from-literal=MY_VARIABLE="Hello, world!"
+```
+
+This command will create a Secret named my-secret with a single entry named
+MY_VARIABLE, whose value is "Hello, world!".
+
+This way, you can manage your Kubernetes secrets directly from your terminal,
+which can help you improve the efficiency of your Kubernetes workflows.
+
 ## MLOps
 
 ### Promoter

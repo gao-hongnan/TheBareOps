@@ -133,8 +133,7 @@ celerybeat.pid
 
 # Environments
 .env
-.env.docker
-.env.github
+.env.*
 .secrets
 secrets.*
 .venv
