@@ -22,9 +22,9 @@ jobs:
       HOME_DIR: ${{ secrets.HOME_DIR }}
       REPO_NAME: ${{ secrets.GOOGLE_ARTIFACTS_REGISTRY_REPO_NAME }}  # Set this to your Artifact Registry repository name
       REGION: ${{ secrets.REGION }}  # Set this to your Artifact Registry region
-      GIT_COMMIT_HASH: ${{ github.sha }}
+      GIT_COMMIT_HASH: ${{ github.sha }} # may not be needed
       IMAGE_NAME: pipeline-dataops  # Define IMAGE_NAME here
-      IMAGE_TAG: ${{ github.sha ::8 }}  # Define IMAGE_TAG here
+      IMAGE_TAG: ${{ github.sha }}  # Define IMAGE_TAG here
 
     steps:
     - name: Checkout code

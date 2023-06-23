@@ -56,19 +56,8 @@ source venv/bin/activate
 
 ## Containerization
 
-#### Tagging Image with Git Commit Hash
 
-Tagging the image with the commit hash of the code used to build the image.
 
-#### Multi-Stage Build
-
-**Consider putting in my docs**.
-
-1.
-#### PATH
-
-2. `ENV PATH="${VENV_DIR}/${VENV_NAME}/bin:$PATH"` is needed to make the virtual
-   environment available in the container.
 
 #### Secrets
 
