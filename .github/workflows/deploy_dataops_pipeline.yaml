@@ -39,11 +39,17 @@ jobs:
 
     - name: Create Artifact Registry Repository
       run: |
-        echo "Creating Artifact Registry Repository..."
-        gcloud artifacts repositories create ${{ env.REPO_NAME }} \
-            --repository-format=docker \
-            --location=${{ env.REGION }} \
-            --description="Docker repository for storing images"
+        echo "Checking if Artifact Registry Repository exists..."
+        if ! gcloud artifacts repositories describe ${{ env.REPO_NAME }} --location=${{ env.REGION }}; then
+          echo "Creating Artifact Registry Repository..."
+          gcloud artifacts repositories create ${{ env.REPO_NAME }} \
+              --repository-format=docker \
+              --location=${{ env.REGION }} \
+              --description="Docker repository for storing images"
+        else
+          echo "Artifact Registry Repository already exists. Skipping creation."
+        fi
+
 
     - name: Configure Docker for Artifact Registry
       run: |
