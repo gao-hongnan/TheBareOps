@@ -47,6 +47,7 @@ touch pyproject.toml
 ## Setup Virtual Environment
 
 ```bash
+cd pipeline-dataops && \
 curl -o make_venv.sh \
   https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/make_venv.sh && \
 bash make_venv.sh venv --pyproject --dev && \
