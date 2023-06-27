@@ -494,14 +494,7 @@ Here is the command you provided broken down line by line for better
 readability:
 
 ```bash
-gcloud container --project "gao-hongnan" \
-  clusters create-auto "autopilot-cluster-1" \
-  --region "us-central1" \
-  --release-channel "regular" \
-  --network "projects/gao-hongnan/global/networks/default" \
-  --subnetwork "projects/gao-hongnan/regions/us-central1/subnetworks/default" \
-  --cluster-ipv4-cidr "/17" \
-  --services-ipv4-cidr "/22"
+gcloud container --project "gao-hongnan" clusters create-auto "autopilot-cluster-2" --region "asia-southeast1" --release-channel "regular" --network "projects/gao-hongnan/global/networks/default" --subnetwork "projects/gao-hongnan/regions/asia-southeast1/subnetworks/default" --cluster-ipv4-cidr "/17" --services-ipv4-cidr "/22"
 ```
 
 This command is creating an Autopilot cluster in GKE.
@@ -527,14 +520,14 @@ would be to authenticate `kubectl` with the newly created cluster. You can do
 this with the following command:
 
 ```bash
-gcloud container clusters get-credentials autopilot-cluster-1 --region us-central1 --project gao-hongnan
+gcloud container clusters get-credentials autopilot-cluster-2 --region asia-southeast1 --project gao-hongnan
 ```
 
 which outputs:
 
 ```markdown
 Fetching cluster endpoint and auth data. kubeconfig entry generated for
-autopilot-cluster-1.
+autopilot-cluster-2.
 ```
 
 This command fetches the access credentials for your cluster and automatically
@@ -722,7 +715,9 @@ your specified container.
 
 ### Debugging
 
-
+```bash
+kubectl exec ...
+```
 
 ### Watch the CronJob in Action
 

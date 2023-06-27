@@ -5,7 +5,7 @@ metadata:
   labels:
     app: dataops
 spec:
-  schedule: "*/2 * * * *"
+  schedule: "*/10 * * * *"
   concurrencyPolicy: Allow
   startingDeadlineSeconds: 100
   suspend: false
@@ -17,7 +17,7 @@ spec:
         spec:
           containers:
             - name: dataops-pod
-              image: us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:11a5d9cfebc6adbcd19c27bdac2cb61b33480a05
+              image: us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:8577bf27ad935086b63d328573e6485177ccd31c
               imagePullPolicy: IfNotPresent
               env: # we extract the values we set in the configmap and mount them as environmen variables in the pods.
                 - name: PROJECT_ID
@@ -50,7 +50,7 @@ spec:
                     configMapKeyRef:
                       name: pipeline-dataops-config
                       key: BIGQUERY_TRANSFORMED_DATASET
-                - name: BIGQUERY_TRANSFORMED_TABLE_NAME
+                - name: BIGQUERY_TRANSFORMED_TABLE
                   valueFrom:
                     configMapKeyRef:
                       name: pipeline-dataops-config
