@@ -17,7 +17,7 @@ spec:
         spec:
           containers:
             - name: dataops-pod
-              image: us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:f7e1be0867bf7d8af67fd0f0da6b6fdb8b7e4346
+              image: us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:adc2f1fb0440474c314d26bacba8d3fd6f5c998c
               imagePullPolicy: IfNotPresent
               env: # we extract the values we set in the configmap and mount them as environmen variables in the pods.
                 - name: PROJECT_ID
@@ -61,13 +61,15 @@ spec:
                       name: pipeline-dataops-secret
                       key: GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64
                 - name: GOOGLE_APPLICATION_CREDENTIALS
-                  value: /var/secrets/google/gcp-storage-service-account.json
-              volumeMounts:
-                - name: google-cloud-credentials
-                  mountPath: /var/secrets/google
-                  readOnly: true
-          volumes:
-            - name: google-cloud-credentials
-              secret:
-                secretName: pipeline-dataops-secret
+                  value: /pipeline-dataops/gcp-storage-service-account.json
+                - name: TZ
+                  value: Asia/Singapore
+          #     volumeMounts:
+          #       - name: google-cloud-credentials
+          #         mountPath: "/pipeline-dataops/"
+          #         readOnly: false
+          # volumes:
+          #   - name: google-cloud-credentials
+          #     secret:
+          #       secretName: pipeline-dataops-secret
           restartPolicy: OnFailure

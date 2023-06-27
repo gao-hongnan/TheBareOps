@@ -180,10 +180,36 @@ class Pipeline:
         max_date_result: pd.DataFrame = bq.query(query, as_dataframe=True)
         max_open_time: int = max(max_date_result["max_open_time"])
 
-        # now max_open_time is your new start_time
+        # now max_open_time is your new start_time, reason to add
+        # interval_to_milliseconds is to avoid duplicates.
+        # meaning, if you have max_open_time to be 1000, and interval is 1m,
+        # then the start_time should be 1000 + 1 = 1001 and not 1000.
         start_time = max_open_time + interval_to_milliseconds(
             interval=self.cfg.extract.from_api.interval
         )
+
+        self.logger.debug("Debugging start_time")
+        import time
+        import pytz
+        from datetime import datetime
+
+        pprint(max_open_time)
+        pprint(start_time)
+        pprint(cfg.extract.from_api.end_time)
+        pprint(int(datetime.utcnow().timestamp() * 1000))
+        pprint(int(datetime.now(pytz.timezone("UTC")).timestamp() * 1000))
+        pprint(cfg.extract.from_api.end_time - start_time)
+        pprint(int(datetime.now(pytz.timezone("UTC")).timestamp() * 1000) - start_time)
+        if cfg.extract.from_api.end_time - start_time < 0:
+            pprint("end_time is less than start_time")
+            self.logger.debug("Overwriting `end_time` in the config manually.")
+            self.cfg.extract.from_api.end_time = int(
+                datetime.now(pytz.timezone("UTC")).timestamp() * 1000
+            )
+        time.sleep(10)
+
+        self.logger.debug("Debug end")
+
         self.logger.warning("Overwriting `start_time` in the config.")
         # NOTE: We are overwriting the start_time here.
         self.cfg.extract.from_api.start_time = int(start_time)

@@ -217,6 +217,8 @@ def from_api(
 
 
 if __name__ == "__main__":
+    import time
+
     cfg = Config()
     # pprint(cfg)
     seed_all(cfg.general.seed)
@@ -249,6 +251,8 @@ if __name__ == "__main__":
         FROM `{bq.table_id}`
         """
     max_date_result: pd.DataFrame = bq.query(query, as_dataframe=True)
+    pprint(max_date_result)
+    time.sleep(1000)
     max_open_time: int = max(max_date_result["max_open_time"])
 
     # now max_open_time is your new start_time

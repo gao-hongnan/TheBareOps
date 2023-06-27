@@ -123,6 +123,7 @@ docker pull \
 ```
 
 ```bash
+cd pipeline-dataops && \
 export GIT_COMMIT_HASH=$(git rev-parse HEAD) && \
 export HOME_DIR=/pipeline-dataops && \
 export IMAGE_NAME=pipeline-dataops && \

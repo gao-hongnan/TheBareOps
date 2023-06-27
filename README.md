@@ -720,6 +720,10 @@ If the CronJob is working correctly, it will create a new Job according to its
 schedule (in this case, every 2 minutes). Each Job will create a Pod that runs
 your specified container.
 
+### Debugging
+
+
+
 ### Watch the CronJob in Action
 
 Great, it seems like your CronJob has been created successfully!
