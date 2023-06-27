@@ -56,7 +56,7 @@ class Environment(BaseModel):
 
     @classmethod
     def create_instance(cls: Type[Environment]) -> Environment:
-        if not is_docker() or not is_kubernetes():
+        if not is_docker() and not is_kubernetes():
             rich.print("Not running inside docker")
             load_env_vars(root_dir=ROOT_DIR)
         return cls(
