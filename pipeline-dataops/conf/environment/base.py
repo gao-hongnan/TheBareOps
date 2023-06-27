@@ -16,6 +16,10 @@ def is_docker() -> Literal[True, False]:
     return os.path.exists(path)
 
 
+def is_kubernetes() -> Literal[True, False]:
+    return os.getenv("KUBERNETES_SERVICE_HOST") is not None
+
+
 class Environment(BaseModel):
     project_id: Optional[str] = Field(
         default=os.getenv("PROJECT_ID"), description="Google Cloud Project ID"
@@ -52,7 +56,7 @@ class Environment(BaseModel):
 
     @classmethod
     def create_instance(cls: Type[Environment]) -> Environment:
-        if not is_docker():
+        if not is_docker() or not is_kubernetes():
             rich.print("Not running inside docker")
             load_env_vars(root_dir=ROOT_DIR)
         return cls(

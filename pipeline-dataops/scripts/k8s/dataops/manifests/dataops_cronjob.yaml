@@ -1,0 +1,73 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dataops-cronjob
+  labels:
+    app: dataops
+spec:
+  schedule: "*/2 * * * *"
+  concurrencyPolicy: Allow
+  startingDeadlineSeconds: 100
+  suspend: false
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: dataops-pod
+              image: us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:f7e1be0867bf7d8af67fd0f0da6b6fdb8b7e4346
+              imagePullPolicy: IfNotPresent
+              env: # we extract the values we set in the configmap and mount them as environmen variables in the pods.
+                - name: PROJECT_ID
+                  valueFrom:
+                    configMapKeyRef:
+                      name: pipeline-dataops-config
+                      key: PROJECT_ID
+                - name: GCS_BUCKET_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: pipeline-dataops-config
+                      key: GCS_BUCKET_NAME
+                - name: GCS_BUCKET_PROJECT_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: pipeline-dataops-config
+                      key: GCS_BUCKET_PROJECT_NAME
+                - name: BIGQUERY_RAW_DATASET
+                  valueFrom:
+                    configMapKeyRef:
+                      name: pipeline-dataops-config
+                      key: BIGQUERY_RAW_DATASET
+                - name: BIGQUERY_RAW_TABLE_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: pipeline-dataops-config
+                      key: BIGQUERY_RAW_TABLE_NAME
+                - name: BIGQUERY_TRANSFORMED_DATASET
+                  valueFrom:
+                    configMapKeyRef:
+                      name: pipeline-dataops-config
+                      key: BIGQUERY_TRANSFORMED_DATASET
+                - name: BIGQUERY_TRANSFORMED_TABLE_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: pipeline-dataops-config
+                      key: BIGQUERY_TRANSFORMED_TABLE
+                - name: GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64
+                  valueFrom:
+                    secretKeyRef:
+                      name: pipeline-dataops-secret
+                      key: GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64
+                - name: GOOGLE_APPLICATION_CREDENTIALS
+                  value: /var/secrets/google/gcp-storage-service-account.json
+              volumeMounts:
+                - name: google-cloud-credentials
+                  mountPath: /var/secrets/google
+                  readOnly: true
+          volumes:
+            - name: google-cloud-credentials
+              secret:
+                secretName: pipeline-dataops-secret
+          restartPolicy: OnFailure

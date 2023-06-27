@@ -608,33 +608,173 @@ data. Save the sensitive data in a `secret.yaml` file and then use
 `kubectl apply -f secret.yaml` to create the Secret in your Kubernetes cluster.
 
 ```bash
-kubectl create secret generic dataops-gcp-credentials-base64 \
+kubectl create secret generic pipeline-dataops-secret \
 --from-literal=GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=$(cat /Users/gaohn/gaohn/TheBareOps/pipeline-dataops/gcp-storage-service-account.txt) \
 --dry-run=client \
 -o yaml > scripts/k8s/dataops/secrets/secret.yaml
 ```
 
+Then apply it
+
+```bash
+kubectl apply -f scripts/k8s/dataops/secrets/secret.yaml
+```
+
+which returns
+
+```markdown
+secret/dataops-gcp-credentials-base64 created
+```
+
 ### Mount the ConfigMap and Secret in a CronJob Manifest
 
 **IMPORTANT** Below is an automated way to use CICD and deploy my
-`manifests/cronjob.yaml` file. The `manifests/cronjob.yaml` file is a template which requires you to change the GIT_COMMIT_HASH to the latest commit hash of the repo. You can do this by running the following command:
+`manifests/cronjob.yaml` file. The `manifests/cronjob.yaml` file is a template
+which requires you to change the GIT_COMMIT_HASH to the latest commit hash of
+the repo. You can do this by running the following command:
 
 ```bash
 sed 's|us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:.*|us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:'"$GIT_COMMIT_HASH"'|' cronjob.yaml | kubectl apply -f -
 ```
 
-1. **Create a CronJob**: Finally, you need to create a CronJob that uses the
-   ConfigMap and Secret you just created. Save the CronJob configuration in a
-   `cronjob.yaml` file and then use `kubectl apply -f cronjob.yaml` to create
-   the CronJob in your Kubernetes cluster.
-
-Throughout these steps, ensure that you replace placeholder values in the yaml
-files with your actual configuration data. Note that sensitive data in the
-`secret.yaml` file should be base64 encoded.
+**Create a CronJob**: Finally, you need to create a CronJob that uses the
+ConfigMap and Secret you just created. Save the CronJob configuration in a
+`cronjob.yaml` file and then use `kubectl apply -f cronjob.yaml` to create the
+CronJob in your Kubernetes cluster.
 
 ```bash
-gcloud container clusters get-credentials autopilot-cluster-1 --region us-central1 --project gao-hongnan
+kubectl apply -f scripts/k8s/dataops/manifests/dataops_cronjob.yaml
 ```
+
+giving
+
+```markdown
+Warning: Autopilot set default resource requests for CronJob default/dataops-cronjob, as resource requests were not specified. See http://g.co/gke/autopilot-defaults
+cronjob.batch/dataops-cronjob created
+```
+
+
+This YAML file is a Kubernetes configuration that defines a `CronJob`. Let's
+break down its structure:
+
+- `apiVersion`: Specifies the version of the Kubernetes API that you're using
+    to create this object.
+
+- `kind`: Specifies the kind of resource you're creating. In this case, it's a
+    `CronJob`, which is a job that runs on a regular schedule.
+
+- `metadata`: Specifies metadata about the object, such as its name and
+    labels.
+
+- `spec`: Specifies the detailed configuration of the object. This can include
+    a wide variety of settings, and it's where most of the configuration
+    happens.
+
+  - `schedule`: Specifies the schedule for the job in Cron format. In this
+        case, it's set to run every 2 minutes.
+
+  - `jobTemplate`: Specifies the template for the job, which includes the
+        specification for the Pod that the job runs in.
+
+    - `spec`: The specification for the Pod. This includes the containers
+            that the Pod runs, their environment variables, and any volumes that
+            they use.
+
+      - `containers`: The list of containers to run in the Pod. Each
+                container includes:
+
+        - `name`: The name of the container.
+
+        - `image`: The image to use for the container.
+
+        - `imagePullPolicy`: The policy for pulling the image. This
+                    can be `Always`, `Never`, or `IfNotPresent`. In this case,
+                    it's set to `Always`, so the image is pulled every time the
+                    Pod starts.
+
+        - `env`: The environment variables for the container. Each
+                    environment variable includes a name and a value, which can
+                    be a literal value or a reference to a value stored in a
+                    ConfigMap or a Secret.
+
+        - `volumeMounts`: Specifies where to mount volumes in the
+                    container's file system.
+
+      - `volumes`: The volumes that the Pod uses. Each volume includes a
+                name and a source, which can be a literal value or a reference
+                to a value stored in a Secret, a ConfigMap, a
+                PersistentVolumeClaim, or another type of volume source.
+
+      - `restartPolicy`: Specifies the Pod's restart policy. In the
+                event of a failure, this is set to `OnFailure`, so the Pod will
+                be restarted.
+
+If you have applied this configuration correctly, Kubernetes will create a new
+`CronJob` resource according to these specifications.
+
+After applying this configuration, you can monitor the status of the CronJob by
+running `kubectl get cronjobs` and `kubectl get jobs`. This will list the
+CronJobs and the Jobs they created.
+
+If the CronJob is working correctly, it will create a new Job according to its
+schedule (in this case, every 2 minutes). Each Job will create a Pod that runs
+your specified container.
+
+### Watch the CronJob in Action
+
+Great, it seems like your CronJob has been created successfully!
+
+The warning message you see is because you have enabled Google Kubernetes Engine (GKE) Autopilot, which automatically sets default resource requests for workloads when resource requests are not specified.
+
+Here are the steps for what you can do next:
+
+0. `kubectl describe cronjob dataops-cronjob` to see the details of the CronJob
+   or in general `kubectl describe pods` to check some errors especially
+   if your CronJob is not running. Can watch your progress like
+
+    ```markdown
+    Events:
+        Type    Reason     Age   From                                   Message
+        ----    ------     ----  ----                                   -------
+        Normal  Scheduled  11s   gke.io/optimize-utilization-scheduler  Successfully assigned default/dataops-cronjob-28130878-qtbxd to gk3-autopilot-cluster-1-pool-1-ffa4a760-q5lt
+        Normal  Pulling    2s    kubelet                                Pulling image "us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:f7e1be0867bf7d8af67fd0f0da6b6fdb8b7e4346"
+    ```
+1. **Check the status of your CronJob**: You can use the `kubectl get cronjobs` command to list the CronJobs in the current namespace. The output should show the status of your CronJob including the last schedule time.
+
+    ```bash
+    kubectl get cronjobs
+    ```
+
+2. **View the Job created by the CronJob**: Once the CronJob has been triggered according to its schedule, it creates a Job. You can use `kubectl get jobs` to view the jobs that have been created. You can also use `kubectl describe job <job-name>` to view more details about a specific Job.
+
+    ```bash
+    kubectl get jobs
+    kubectl describe job <job-name>
+    ```
+
+3. **View the logs of the Pods created by the Job**: Each Job creates one or more Pods to execute the task. You can use `kubectl get pods` to view the Pods and `kubectl logs <pod-name>` to view the logs of a specific Pod.
+
+    ```bash
+    kubectl get pods
+    kubectl logs <pod-name>
+    ```
+
+    or if you want to monitor real time if the job is long.
+
+    ```bash
+    kubectl logs -f <pod-name>
+    ```
+
+4. **Check the result of your data pipeline**: Depending on what your data pipeline does, you might want to check the result. For example, if your data pipeline writes data into a database, you could check the contents of the database to ensure the data has been written correctly.
+
+Remember that a CronJob will run according to the schedule you specified ("*/2 * * * *" in your case, which means every 2 minutes). Make sure your data pipeline can complete within this interval to avoid overlapping runs.
+
+You can use `kubectl logs <pod-name>` to check the logs of the Pods. Here you
+can find the output of your script (`pipeline.py`), which will help you verify
+whether the script executed successfully or not. If you see the expected output
+in the logs, this indicates that the cronjob is successful.
+
+
 
 ### Set Kubernetes Secrets from the Command Line
 
