@@ -53,6 +53,11 @@ COPY --from=builder ${HOME_DIR} ${HOME_DIR}
 # Set the working directory inside the Docker container
 WORKDIR ${HOME_DIR}
 
+# Install jq
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends jq && \
+    rm -rf /var/lib/apt/lists/*
+
 ENV PATH="${VENV_DIR}/${VENV_NAME}/bin:$PATH"
 
 # set git commit env

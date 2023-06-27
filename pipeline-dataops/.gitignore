@@ -9,6 +9,7 @@ tmp.*
 
 # secrets
 gcp-storage-service-account.json
+secret.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

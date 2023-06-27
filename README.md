@@ -473,6 +473,169 @@ best practices
 
 ## Kubernetes
 
+We will be using Google Kubernetes Engine (GKE) to deploy our application. As
+usual, we assume that you have the google cloud sdk installed and configured.
+
+On top of that, you need to install the
+[`gke-gcloud-auth-plugin`](https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke):
+
+```bash
+gcloud components install gke-gcloud-auth-plugin
+```
+
+### Create a Kubernetes Cluster
+
+As a first time user, I used the autopilot feature of Google Kubernetes Engine
+(GKE) to create a cluster. The autopilot mode is a fully managed mode that
+allows users to focus on deploying their applications without worrying about the
+underlying infrastructure. It is a good choice for beginners.
+
+Here is the command you provided broken down line by line for better
+readability:
+
+```bash
+gcloud container --project "gao-hongnan" \
+  clusters create-auto "autopilot-cluster-1" \
+  --region "us-central1" \
+  --release-channel "regular" \
+  --network "projects/gao-hongnan/global/networks/default" \
+  --subnetwork "projects/gao-hongnan/regions/us-central1/subnetworks/default" \
+  --cluster-ipv4-cidr "/17" \
+  --services-ipv4-cidr "/22"
+```
+
+This command is creating an Autopilot cluster in GKE.
+
+- `--project "gao-hongnan"` sets the GCP project to use.
+- `clusters create-auto "autopilot-cluster-1"` creates an Autopilot cluster
+    named `autopilot-cluster-1`.
+- `--region "us-central1"` specifies the region where the cluster will be
+    created.
+- `--release-channel "regular"` specifies the release channel for the cluster.
+- `--network` and `--subnetwork` are specifying the network and subnetwork for
+    the cluster.
+- `--cluster-ipv4-cidr "/17"` and `--services-ipv4-cidr "/22"` are specifying
+    the IP address ranges for the cluster and the services within the cluster.
+
+Remember to replace the project name and other parameters with your specific
+values.
+
+### Authenticate the Cluster
+
+After creating the Kubernetes cluster using the `gcloud` command, the next step
+would be to authenticate `kubectl` with the newly created cluster. You can do
+this with the following command:
+
+```bash
+gcloud container clusters get-credentials autopilot-cluster-1 --region us-central1 --project gao-hongnan
+```
+
+which outputs:
+
+```markdown
+Fetching cluster endpoint and auth data. kubeconfig entry generated for
+autopilot-cluster-1.
+```
+
+This command fetches the access credentials for your cluster and automatically
+configures `kubectl`. This allows you to use `kubectl` to interact with your
+cluster.
+
+### Verify the Cluster
+
+```bash
+kubectl get nodes
+```
+
+which outputs:
+
+```markdown
+❯ kubectl get nodes
+
+NAME STATUS ROLES AGE VERSION gk3-autopilot-cluster-1-default-pool-0f7a9b55-wdgd
+Ready <none> 10m v1.25.8-gke.1000
+gk3-autopilot-cluster-1-default-pool-15d96b34-3szz Ready <none> 10m
+v1.25.8-gke.1000
+```
+
+Why are there two nodes in the output?
+
+In Kubernetes, a cluster consists of at least one master node and multiple
+worker nodes. The master node (or control plane) manages the cluster, while the
+worker nodes (or just nodes) are where your applications run.
+
+When you create a cluster on Google Kubernetes Engine (GKE), GKE automatically
+configures your cluster with multiple nodes for redundancy and high
+availability. Each node is actually a separate virtual machine that is part of
+your cluster.
+
+So, even though you have one cluster, that cluster is made up of multiple nodes.
+The command `kubectl get nodes` lists all the worker nodes in your cluster. In
+your case, you have two worker nodes in your cluster, hence you see two nodes in
+the output.
+
+The fact that you have two nodes means that your cluster has more resources to
+run your applications, and it also means that if one node fails, your
+applications can still run on the other node.
+
+### Create a ConfigMap
+
+**Create a ConfigMap**: As explained in the previous posts, you need to create a
+ConfigMap for your non-sensitive configuration data. Save the configuration data
+in a `configmap.yaml` file and then use `kubectl apply -f configmap.yaml` to
+create the ConfigMap in your Kubernetes cluster.
+
+```bash
+kubectl apply -f scripts/k8s/dataops/config_maps/configmap.yaml
+```
+
+which outputs:
+
+```markdown
+configmap/pipeline-dataops-config created
+```
+
+and to view it you can do:
+
+```bash
+kubectl get configmap pipeline-dataops-config
+```
+
+### Create a Secret
+
+**Create a Secret**: Similarly, create a Secret for your sensitive configuration
+data. Save the sensitive data in a `secret.yaml` file and then use
+`kubectl apply -f secret.yaml` to create the Secret in your Kubernetes cluster.
+
+```bash
+kubectl create secret generic dataops-gcp-credentials-base64 \
+--from-literal=GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=$(cat /Users/gaohn/gaohn/TheBareOps/pipeline-dataops/gcp-storage-service-account.txt) \
+--dry-run=client \
+-o yaml > scripts/k8s/dataops/secrets/secret.yaml
+```
+
+### Mount the ConfigMap and Secret in a CronJob Manifest
+
+**IMPORTANT** Below is an automated way to use CICD and deploy my
+`manifests/cronjob.yaml` file. The `manifests/cronjob.yaml` file is a template which requires you to change the GIT_COMMIT_HASH to the latest commit hash of the repo. You can do this by running the following command:
+
+```bash
+sed 's|us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:.*|us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:'"$GIT_COMMIT_HASH"'|' cronjob.yaml | kubectl apply -f -
+```
+
+1. **Create a CronJob**: Finally, you need to create a CronJob that uses the
+   ConfigMap and Secret you just created. Save the CronJob configuration in a
+   `cronjob.yaml` file and then use `kubectl apply -f cronjob.yaml` to create
+   the CronJob in your Kubernetes cluster.
+
+Throughout these steps, ensure that you replace placeholder values in the yaml
+files with your actual configuration data. Note that sensitive data in the
+`secret.yaml` file should be base64 encoded.
+
+```bash
+gcloud container clusters get-credentials autopilot-cluster-1 --region us-central1 --project gao-hongnan
+```
+
 ### Set Kubernetes Secrets from the Command Line
 
 This guide provides instructions on how to set Kubernetes secrets from the
