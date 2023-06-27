@@ -206,6 +206,11 @@ class Pipeline:
             self.cfg.extract.from_api.end_time = int(
                 datetime.now(pytz.timezone("UTC")).timestamp() * 1000
             )
+            if cfg.extract.from_api.end_time - start_time < 0:
+                pprint("end_time is still less than start_time")
+                self.cfg.extract.from_api.end_time = (
+                    start_time + 3600 * 1000
+                )  # add 1 hour
         time.sleep(10)
 
         self.logger.debug("Debug end")
