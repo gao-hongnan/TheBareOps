@@ -1,18 +1,22 @@
+import logging
+
+import pandas as pd
 from common_utils.cloud.gcp.database.bigquery import BigQuery
 from common_utils.cloud.gcp.storage.gcs import GCS
 from common_utils.core.base import Connection, Storage
 from common_utils.core.common import seed_all
 from common_utils.core.logger import Logger
 from rich.pretty import pprint
-import pandas as pd
+
 from conf.base import Config
 from metadata.core import Metadata
 from pipeline_dataops.extract.core import from_api, interval_to_milliseconds
 from pipeline_dataops.load.core import to_bigquery, to_google_cloud_storage
-from pipeline_dataops.schema.core import generate_bq_schema_from_pandas
 from pipeline_dataops.transform.core import cast_columns
+from pipeline_dataops.validate.core import validate_non_null_columns, validate_schema
+from schema.core import RawSchema, TransformedSchema
 
-# pylint: disable=no-member,logging-fstring-interpolation
+# pylint: disable=no-member,logging-fstring-interpolation,invalid-name
 
 
 # TODO:
@@ -63,6 +67,32 @@ class Pipeline:
         """
         return self.connection.check_if_table_exists()
 
+    def validate_raw(self, df: pd.DataFrame) -> None:
+        """Validate the raw data."""
+        self.logger.info("Validating raw schema...")
+        validate_schema(logger=self.logger, df=df, validator=RawSchema)
+        self.logger.info("✅ Raw schema is valid.")
+
+        self.logger.info("Validating non-null columns...")
+        validate_non_null_columns(
+            logger=self.logger, df=df, columns=list(RawSchema.__annotations__.keys())
+        )
+        self.logger.info("✅ There are no null values in the specified columns.")
+
+    def validate_transformed(self, df: pd.DataFrame) -> None:
+        """Validate the transformed data."""
+        self.logger.info("Validating transformed schema...")
+        validate_schema(logger=self.logger, df=df, validator=TransformedSchema)
+        self.logger.info("✅ Transformed schema is valid.")
+
+        self.logger.info("Validating non-null columns...")
+        validate_non_null_columns(
+            logger=self.logger,
+            df=df,
+            columns=list(TransformedSchema.__annotations__.keys()),
+        )
+        self.logger.info("✅ There are no null values in the specified columns.")
+
     def initial_extract_and_load_and_transform(self) -> Metadata:
         """Do not need to return Metadata since it is an initial extract."""
         if not self.bucket_exists():
@@ -82,7 +112,6 @@ class Pipeline:
         )
         updated_at = metadata.updated_at
         raw_df = metadata.raw_df
-        raw_df["updated_at"] = updated_at
 
         blob = to_google_cloud_storage(
             df=raw_df,
@@ -93,7 +122,8 @@ class Pipeline:
         )
         self.logger.info(f"File {blob.name} uploaded to {self.storage.bucket_name}")
 
-        schema = generate_bq_schema_from_pandas(raw_df)
+        self.validate_raw(df=raw_df)
+        schema = RawSchema.to_bq_schema()
 
         self.connection.create_table(schema=schema)
 
@@ -110,6 +140,8 @@ class Pipeline:
         transformed_df = cast_columns(
             df=raw_df, **self.cfg.transform.cast_columns.model_dump(mode="python")
         )
+        self.validate_transformed(df=transformed_df)
+
         blob = to_google_cloud_storage(
             transformed_df,
             gcs=self.storage,
@@ -117,7 +149,7 @@ class Pipeline:
             table_name=self.cfg.env.bigquery_transformed_table_name,
             updated_at=updated_at,
         )
-        schema = generate_bq_schema_from_pandas(transformed_df)
+        schema = TransformedSchema.to_bq_schema()
         self.connection.table_name = self.cfg.env.bigquery_transformed_table_name
         self.connection.create_table(schema=schema)
         to_bigquery(
@@ -164,9 +196,10 @@ class Pipeline:
 
     def load(self, metadata: Metadata) -> Metadata:
         raw_df = metadata.raw_df
+        self.validate_raw(df=raw_df)
+
         # call it so that it persists across the next few lines
         updated_at = metadata.updated_at
-        raw_df["updated_at"] = updated_at
 
         blob = to_google_cloud_storage(
             df=raw_df,
@@ -182,10 +215,14 @@ class Pipeline:
         return metadata
 
     def transform(self, metadata: Metadata) -> Metadata:
+        # TODO: consider update updated_at in transform instead of using
+        # the updated_at from the extract.
         transformed_df = cast_columns(
             df=metadata.raw_df,
             **self.cfg.transform.cast_columns.model_dump(mode="python"),
         )
+        self.validate_transformed(df=transformed_df)
+
         blob = to_google_cloud_storage(
             df=transformed_df,
             gcs=self.storage,
@@ -194,7 +231,11 @@ class Pipeline:
             updated_at=metadata.updated_at,
         )
         self.logger.info(f"File {blob.name} uploaded to {self.storage.bucket_name}.")
-        schema = generate_bq_schema_from_pandas(transformed_df)
+        schema = TransformedSchema.to_bq_schema()
+
+        self.logger.warning(
+            "Overwriting `table_name` in the config to transformed table."
+        )
         self.connection.table_name = self.cfg.env.bigquery_transformed_table_name
         to_bigquery(
             df=transformed_df,
@@ -236,6 +277,7 @@ if __name__ == "__main__":
         log_root_dir=cfg.dirs.stores.logs,
         module_name=__name__,
         propagate=False,
+        level=logging.DEBUG,
     ).logger
 
     gcs = GCS(

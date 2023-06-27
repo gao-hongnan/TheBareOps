@@ -1,7 +1,48 @@
+from datetime import datetime
 from typing import List
 
 import pandas as pd
 from google.cloud import bigquery
+
+from schema.base import BaseSchema
+
+
+class RawSchema(BaseSchema):
+    utc_datetime: datetime
+    open_time: int
+    open: str
+    high: str
+    low: str
+    close: str
+    volume: str
+    close_time: int
+    quote_asset_volume: str
+    number_of_trades: int
+    taker_buy_base_asset_volume: str
+    taker_buy_quote_asset_volume: str
+    ignore: str
+    updated_at: datetime
+
+
+# Then define TransformedSchema with its unique fields
+
+
+class TransformedSchema(BaseSchema):
+    utc_datetime: datetime
+    open_time: datetime
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+    close_time: datetime
+    quote_asset_volume: float
+    number_of_trades: int
+    taker_buy_base_asset_volume: float
+    taker_buy_quote_asset_volume: float
+    ignore: str
+    updated_at: datetime
+    utc_singapore_datetime: datetime
 
 
 # TODO: Consider adding schema under a pydantic model

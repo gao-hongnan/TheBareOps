@@ -1,5 +1,6 @@
-import pandas as pd
 from typing import List
+
+import pandas as pd
 
 
 # TODO: god help me the tz localize and convert is not working

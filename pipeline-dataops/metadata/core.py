@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, List, Union
 
 import pandas as pd
 import pytz
@@ -28,8 +28,9 @@ class Metadata:
     end_time: int = None
     base_url: str = None
     endpoint: str = None
-    exported_at_utc: int = None
+    extract_updated_at_utc: int = None
 
+    raw_data: List[List[Union[str, float]]] = None
     raw_df: pd.DataFrame = None
 
     updated_at: datetime = field(

@@ -62,6 +62,7 @@ ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
 # Copy the rest of the application's code
 COPY ${CONTEXT_DIR}/conf ${HOME_DIR}/conf
 COPY ${CONTEXT_DIR}/metadata ${HOME_DIR}/metadata
+COPY ${CONTEXT_DIR}/schema ${HOME_DIR}/schema
 COPY ${CONTEXT_DIR}/pipeline_dataops ${HOME_DIR}/pipeline_dataops
 COPY ${CONTEXT_DIR}/pipeline.py ${HOME_DIR}/pipeline.py
 COPY ${CONTEXT_DIR}/scripts/docker/entrypoint.sh ${HOME_DIR}/scripts/docker/entrypoint.sh
