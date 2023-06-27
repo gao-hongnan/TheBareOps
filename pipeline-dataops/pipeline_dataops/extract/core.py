@@ -128,7 +128,18 @@ def execute_request(url: str, params: Dict[str, Any]) -> List[Union[str, float]]
     requests.exceptions.RequestException
         If the GET request fails for any reason.
     """
-    resp = requests.get(url=url, params=params, timeout=30)
+    try:
+        resp = requests.get(url=url, params=params, timeout=120)
+        resp.raise_for_status()  # Raises a HTTPError if one occurred
+    except requests.exceptions.HTTPError as errh:
+        print("HTTP Error:", errh)
+    except requests.exceptions.ConnectionError as errc:
+        print("Error Connecting:", errc)
+    except requests.exceptions.Timeout as errt:
+        print("Timeout Error:", errt)
+    except requests.exceptions.RequestException as err:
+        print("Something went wrong with the request:", err)
+
     data = resp.json()
     return data
 
@@ -156,6 +167,7 @@ def from_api(
     interval_in_milliseconds = interval_to_milliseconds(interval)
 
     time_range = end_time - start_time  # total time range
+    print(f"time_range: {time_range}")
     request_max = limit * interval_in_milliseconds
 
     start_iteration = start_time
