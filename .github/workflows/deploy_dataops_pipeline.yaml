@@ -1,89 +1,77 @@
-name: Deploy DataOps Pipeline
+# name: Deploy DataOps Pipeline
+# # https://docs.github.com/en/actions/deployment/deploying-to-your-cloud-provider/deploying-to-google-kubernetes-engine
 
-on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**/*.md'
-      - '**/.gitignore'
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths-ignore:
+#       - '**/*.md'
+#       - '**/.gitignore'
 
-jobs:
-  deploy_dataops_pipeline:
-    runs-on: ubuntu-latest
-    env:
-      PROJECT_ID: ${{ secrets.PROJECT_ID }}
-      GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
-      GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-      GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64 }}
-      GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
-      GCS_BUCKET_PROJECT_NAME: ${{ secrets.GCS_BUCKET_PROJECT_NAME }}
-      BIGQUERY_RAW_DATASET: ${{ secrets.BIGQUERY_RAW_DATASET }}
-      BIGQUERY_RAW_TABLE_NAME: ${{ secrets.BIGQUERY_RAW_TABLE_NAME }}
-      BIGQUERY_TRANSFORMED_DATASET: ${{ secrets.BIGQUERY_TRANSFORMED_DATASET }}
-      BIGQUERY_TRANSFORMED_TABLE: ${{ secrets.BIGQUERY_TRANSFORMED_TABLE }}
-      HOME_DIR: ${{ secrets.HOME_DIR }}
-      REPO_NAME: ${{ secrets.GOOGLE_ARTIFACTS_REGISTRY_REPO_NAME }}  # Set this to your Artifact Registry repository name
-      REGION: ${{ secrets.REGION }}  # Set this to your Artifact Registry region
-      GIT_COMMIT_HASH: ${{ github.sha }} # may not be needed
-      IMAGE_NAME: pipeline-dataops  # Define IMAGE_NAME here
-      IMAGE_TAG: ${{ github.sha }}  # Define IMAGE_TAG here
+# jobs:
+#   deploy_dataops_pipeline:
+#     runs-on: ubuntu-latest
+#     env:
+#       PROJECT_ID: ${{ secrets.PROJECT_ID }}
+#       GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+#       GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+#       GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64 }}
+#       GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
+#       GCS_BUCKET_PROJECT_NAME: ${{ secrets.GCS_BUCKET_PROJECT_NAME }}
+#       BIGQUERY_RAW_DATASET: ${{ secrets.BIGQUERY_RAW_DATASET }}
+#       BIGQUERY_RAW_TABLE_NAME: ${{ secrets.BIGQUERY_RAW_TABLE_NAME }}
+#       BIGQUERY_TRANSFORMED_DATASET: ${{ secrets.BIGQUERY_TRANSFORMED_DATASET }}
+#       BIGQUERY_TRANSFORMED_TABLE: ${{ secrets.BIGQUERY_TRANSFORMED_TABLE }}
+#       HOME_DIR: ${{ secrets.HOME_DIR }}
+#       REPO_NAME: ${{ secrets.GOOGLE_ARTIFACTS_REGISTRY_REPO_NAME }}  # Set this to your Artifact Registry repository name
+#       REGION: ${{ secrets.REGION }}  # Set this to your Artifact Registry region
+#       GIT_COMMIT_HASH: ${{ github.sha }} # may not be needed
+#       IMAGE_NAME: pipeline-dataops  # Define IMAGE_NAME here
+#       IMAGE_TAG: ${{ github.sha }}  # Define IMAGE_TAG here
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v3
 
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0.2.0
-      with:
-        project_id: ${{ env.PROJECT_ID }}
-        service_account_key: ${{ env.GOOGLE_SERVICE_ACCOUNT_KEY }}
-        export_default_credentials: true
+#     - name: Set up Cloud SDK
+#       uses: google-github-actions/setup-gcloud@v0.2.0
+#       with:
+#         project_id: ${{ env.PROJECT_ID }}
+#         service_account_key: ${{ env.GOOGLE_SERVICE_ACCOUNT_KEY }}
+#         export_default_credentials: true
 
-    - name: Create Artifact Registry Repository
-      run: |
-        echo "Checking if Artifact Registry Repository exists..."
-        if ! gcloud artifacts repositories describe ${{ env.REPO_NAME }} --location=${{ env.REGION }}; then
-          echo "Creating Artifact Registry Repository..."
-          gcloud artifacts repositories create ${{ env.REPO_NAME }} \
-              --repository-format=docker \
-              --location=${{ env.REGION }} \
-              --description="Docker repository for storing images"
-        else
-          echo "Artifact Registry Repository already exists. Skipping creation."
-        fi
+#     - name: Create Artifact Registry Repository
+#       run: |
+#         echo "Checking if Artifact Registry Repository exists..."
+#         if ! gcloud artifacts repositories describe ${{ env.REPO_NAME }} --location=${{ env.REGION }}; then
+#           echo "Creating Artifact Registry Repository..."
+#           gcloud artifacts repositories create ${{ env.REPO_NAME }} \
+#               --repository-format=docker \
+#               --location=${{ env.REGION }} \
+#               --description="Docker repository for storing images"
+#         else
+#           echo "Artifact Registry Repository already exists. Skipping creation."
+#         fi
 
 
-    - name: Configure Docker for Artifact Registry
-      run: |
-        echo "Configuring Docker for Artifact Registry..."
-        gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+#     - name: Configure Docker for Artifact Registry
+#       run: |
+#         echo "Configuring Docker for Artifact Registry..."
+#         gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-    - name: Build Docker image
-      run: |
-        echo "Building Docker image..."
-        cd pipeline-dataops
-        docker build \
-        --build-arg GIT_COMMIT_HASH=${IMAGE_TAG} \
-        -f Dockerfile \
-        -t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${IMAGE_TAG}" \
-        .
+#     - name: Build Docker image
+#       run: |
+#         echo "Building Docker image..."
+#         cd pipeline-dataops
+#         docker build \
+#         --build-arg GIT_COMMIT_HASH=${IMAGE_TAG} \
+#         -f Dockerfile \
+#         -t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${IMAGE_TAG}" \
+#         .
 
-    - name: Push Docker image to Google Artifact Registry
-      run: |
-        echo "Pushing Docker image..."
-        docker push \
-        "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${IMAGE_TAG}"
-
-    # - name: Deploy to Cloud Run
-    #   run: |
-    #     echo "Deploying to Cloud Run..."
-    #     gcloud run deploy ${APP_NAME} \
-    #     --image "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${APP_NAME}:v1" \
-    #     --region ${REGION} \
-    #     --memory 2G \
-    #     --platform managed \
-    #     --allow-unauthenticated \
-    #     --no-cpu-throttling \
-    #     --update-env-vars=GOOGLE_SERVICE_ACCOUNT_BASE64="${{ secrets.GOOGLE_SERVICE_ACCOUNT_BASE64 }}"
-    #     echo "Successfully deployed to Google Cloud Run"
+#     - name: Push Docker image to Google Artifact Registry
+#       run: |
+#         echo "Pushing Docker image..."
+#         docker push \
+#         "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${IMAGE_TAG}"

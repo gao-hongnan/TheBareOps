@@ -1,4 +1,5 @@
 import logging
+import time
 
 import pandas as pd
 from common_utils.cloud.gcp.database.bigquery import BigQuery
@@ -6,9 +7,9 @@ from common_utils.cloud.gcp.storage.gcs import GCS
 from common_utils.core.base import Connection, Storage
 from common_utils.core.common import seed_all
 from common_utils.core.logger import Logger
-from rich.pretty import pprint
 
-from conf.base import Config
+from conf.base import RUN_ID, Config
+from conf.directory.base import ROOT_DIR
 from metadata.core import Metadata
 from pipeline_dataops.extract.core import from_api, interval_to_milliseconds
 from pipeline_dataops.load.core import to_bigquery, to_google_cloud_storage
@@ -188,33 +189,6 @@ class Pipeline:
             interval=self.cfg.extract.from_api.interval
         )
 
-        self.logger.debug("Debugging start_time")
-        import time
-        import pytz
-        from datetime import datetime
-
-        pprint(max_open_time)
-        pprint(start_time)
-        pprint(cfg.extract.from_api.end_time)
-        pprint(int(datetime.utcnow().timestamp() * 1000))
-        pprint(int(datetime.now(pytz.timezone("UTC")).timestamp() * 1000))
-        pprint(cfg.extract.from_api.end_time - start_time)
-        pprint(int(datetime.now(pytz.timezone("UTC")).timestamp() * 1000) - start_time)
-        if cfg.extract.from_api.end_time - start_time < 0:
-            pprint("end_time is less than start_time")
-            self.logger.debug("Overwriting `end_time` in the config manually.")
-            self.cfg.extract.from_api.end_time = int(
-                datetime.now(pytz.timezone("UTC")).timestamp() * 1000
-            )
-            if cfg.extract.from_api.end_time - start_time < 0:
-                pprint("end_time is still less than start_time")
-                self.cfg.extract.from_api.end_time = (
-                    start_time + 3600 * 1000
-                )  # add 1 hour
-        time.sleep(10)
-
-        self.logger.debug("Debug end")
-
         self.logger.warning("Overwriting `start_time` in the config.")
         # NOTE: We are overwriting the start_time here.
         self.cfg.extract.from_api.start_time = int(start_time)
@@ -227,7 +201,6 @@ class Pipeline:
 
     def load(self, metadata: Metadata) -> Metadata:
         raw_df = metadata.raw_df
-        self.validate_raw(df=raw_df)
 
         # call it so that it persists across the next few lines
         updated_at = metadata.updated_at
@@ -252,7 +225,6 @@ class Pipeline:
             df=metadata.raw_df,
             **self.cfg.transform.cast_columns.model_dump(mode="python"),
         )
-        self.validate_transformed(df=transformed_df)
 
         blob = to_google_cloud_storage(
             df=transformed_df,
@@ -279,18 +251,36 @@ class Pipeline:
         return metadata
 
     def run(self) -> Metadata:
+        start_time = time.time()
         if self.is_first_run():
             self.logger.info("First run detected. Running initial extract and load")
             metadata = self.initial_extract_and_load_and_transform()
         else:
             metadata = self.extract()
-            pprint(metadata.raw_df)
-            logger.info(
-                "Extracted data from API, proceeding to load to BigQuery and GCS."
+            self.logger.info(
+                "Extracted data from API, now validating data schema and skews."
+            )
+
+            self.validate_raw(df=metadata.raw_df)
+            self.logger.info(
+                "Validation successful. Now loading data to Google Cloud Storage and BigQuery."
             )
 
             metadata = self.load(metadata)
+            self.logger.info("Loading successful. Now transforming data.")
+
             metadata = self.transform(metadata)
+            self.logger.info(
+                "Transformation successful. Now validating transformed data."
+            )
+
+            self.validate_transformed(df=metadata.transformed_df)
+            self.logger.info("Validation successful. Now updating metadata.")
+
+        end_time = time.time()
+        pipeline_time_taken = end_time - start_time
+        metadata.set_attrs({"pipeline_time_taken": pipeline_time_taken})
+        self.logger.info("Pipeline run successful. Time taken: %s", pipeline_time_taken)
 
         return metadata
 
@@ -310,6 +300,9 @@ if __name__ == "__main__":
         propagate=False,
         level=logging.DEBUG,
     ).logger
+
+    # log run_id and root_dir
+    logger.info(f"run_id: {RUN_ID}\nroot_dir: {ROOT_DIR}")
 
     gcs = GCS(
         project_id=cfg.env.project_id,

@@ -17,7 +17,7 @@ spec:
         spec:
           containers:
             - name: dataops-pod
-              image: us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:8577bf27ad935086b63d328573e6485177ccd31c
+              image: us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:c44bb9623eb91f6f526fe98efffdb7848a8a8407
               imagePullPolicy: IfNotPresent
               env: # we extract the values we set in the configmap and mount them as environmen variables in the pods.
                 - name: PROJECT_ID

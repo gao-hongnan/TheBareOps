@@ -49,7 +49,6 @@ ROOT_DIR = Path(__file__).parents[2].absolute()
 ROOT_DIR = get_root_dir(env_var="ROOT_DIR", root_dir=ROOT_DIR)
 
 os.environ["ROOT_DIR"] = str(ROOT_DIR)
-pprint(f"ROOT_DIR: {ROOT_DIR}")
 
 
 class BaseDirType(Enum):

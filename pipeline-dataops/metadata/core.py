@@ -6,6 +6,8 @@ import pandas as pd
 import pytz
 
 # TODO: Compose Metadata in a similar way as Config instead of scattering.
+# TODO: Add more metadata attributes, for example the GCS path that stores
+# raw and transformed data.
 
 
 # pylint: disable=unnecessary-dunder-call
@@ -38,6 +40,8 @@ class Metadata:
     )
 
     transformed_df: pd.DataFrame = None
+
+    pipeline_time_taken: float = None
 
     def release(self, attribute: str) -> Any:
         self.__setattr__(attribute, None)

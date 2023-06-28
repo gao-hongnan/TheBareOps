@@ -167,7 +167,6 @@ def from_api(
     interval_in_milliseconds = interval_to_milliseconds(interval)
 
     time_range = end_time - start_time  # total time range
-    print(f"time_range: {time_range}")
     request_max = limit * interval_in_milliseconds
 
     start_iteration = start_time

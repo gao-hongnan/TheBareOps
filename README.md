@@ -627,7 +627,11 @@ which requires you to change the GIT_COMMIT_HASH to the latest commit hash of
 the repo. You can do this by running the following command:
 
 ```bash
-sed 's|us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:.*|us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:'"$GIT_COMMIT_HASH"'|' cronjob.yaml | kubectl apply -f -
+sed -i 's|us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:.*|us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:'"$GIT_COMMIT_HASH"'|' test.yaml
+```
+
+```bash
+kubectl apply -f -
 ```
 
 **Create a CronJob**: Finally, you need to create a CronJob that uses the
