@@ -53,6 +53,23 @@ def interval_to_milliseconds(interval: str) -> int:
 
 
 def get_url(base_url: str, endpoint: str) -> str:
+    """
+    Concatenates the base URL and endpoint to form the full API URL.
+
+    Parameters
+    ----------
+    base_url : str
+        The base URL of the API. This usually includes the domain
+        and any base path that is common to all endpoints.
+    endpoint : str
+        The endpoint path. This is appended to the base URL to
+        identify the specific resource to interact with.
+
+    Returns
+    -------
+    str
+        The full URL for the API endpoint.
+    """
     return base_url + endpoint
 
 
@@ -144,8 +161,27 @@ def execute_request(url: str, params: Dict[str, Any]) -> List[Union[str, float]]
     return data
 
 
-# Create a function to handle the response and convert it into a DataFrame.
-def handle_response(data: list, response_columns: list):
+def handle_response(
+    data: List[List[Union[str, float]]], response_columns: List[str]
+) -> pd.DataFrame:
+    """
+    Converts a response from an API into a pandas DataFrame.
+
+    Parameters
+    ----------
+    data : List[List[Union[str, float]]]
+        A list of lists representing the response data from the API.
+        Each inner list corresponds to a row of data and each item
+        in the inner list represents a data field.
+    response_columns : List[str]
+        A list of column names for the DataFrame. The order of the
+        column names should match the order of the fields in the data.
+
+    Returns
+    -------
+    pd.DataFrame
+        A pandas DataFrame representing the API response data.
+    """
     df = pd.DataFrame(data, columns=response_columns)
     return df
 
@@ -161,6 +197,43 @@ def from_api(
     base_url: str = "https://api.binance.com",
     endpoint: str = "/api/v3/klines",
 ) -> Optional[Tuple[pd.DataFrame, Dict[str, Any]]]:
+    """
+    Fetches data from an API and returns the data and metadata.
+
+    This function sends one or more requests to a specified API endpoint
+    and retrieves historical data for a given trading symbol. The start
+    and end times for the data, as well as the interval between data
+    points, can be specified. The function updates the metadata with
+    information about the request and the data.
+
+    Parameters
+    ----------
+    metadata : Metadata
+        A Metadata object to be updated with information about the data
+        and the request.
+    response_columns : List[str]
+        The column names for the returned DataFrame.
+    symbol : str
+        The trading symbol to get data for.
+    start_time : int
+        The start time for the data, in milliseconds since epoch.
+    end_time : int, optional
+        The end time for the data, in milliseconds since epoch.
+        If not specified, the current time is used.
+    interval : str, default="1m"
+        The interval between data points.
+    limit : int, default=1000
+        The maximum number of data points to retrieve.
+    base_url : str, default="https://api.binance.com"
+        The base URL of the API.
+    endpoint : str, default="/api/v3/klines"
+        The endpoint to send the request to.
+
+    Returns
+    -------
+    Optional[Metadata]
+        The updated Metadata object, or None if the request was unsuccessful.
+    """
     url = get_url(base_url, endpoint)
 
     # Convert interval to milliseconds

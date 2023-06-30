@@ -35,6 +35,25 @@ class Pipeline:
         connection: Connection,
         storage: Storage,
     ) -> None:
+        """
+        Initialize the pipeline with the provided configurations, metadata,
+        logger, connection, and storage.
+
+        Parameters
+        ----------
+        cfg : Config
+            The configuration object containing all the necessary parameters.
+        metadata : Metadata
+            The metadata object used to store metadata about the pipeline.
+        logger : Logger
+            The logger object used for logging.
+        connection : Connection
+            The connection object used for database interactions. In our example
+            here, it is BigQuery.
+        storage : Storage
+            The storage object used for storing files. In our example here, it is
+            Google Cloud Storage.
+        """
         self.cfg = cfg
         self.metadata = metadata
         self.logger = logger
@@ -251,6 +270,15 @@ class Pipeline:
         return metadata
 
     def run(self) -> Metadata:
+        """
+        Run the entire pipeline from data extraction, loading, transformation to
+        validation.
+
+        Returns
+        -------
+        Metadata
+            The updated metadata after running the pipeline.
+        """
         start_time = time.time()
         if self.is_first_run():
             self.logger.info("First run detected. Running initial extract and load")

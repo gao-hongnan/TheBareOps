@@ -122,6 +122,7 @@ skip_glob = [
         "fixme",
         "reimported",
         "ungrouped-imports",
+        "invalid-name",
     ]
 
 # https://bandit.readthedocs.io/en/latest/config.html
