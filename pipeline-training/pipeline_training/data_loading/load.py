@@ -62,12 +62,12 @@ def load(
 
     Parameters
     ----------
+    cfg: Config
+        The Config object containing the configuration parameters.
     metadata: Metadata
         The Metadata object containing the data to be loaded.
     logger: Logger
         The Logger object for logging information and errors.
-    dirs: Directories
-        The Directories object with the directories for data loading.
     dvc: Optional[SimpleDVC]
         The optional DVC object for data file tracking.
 
@@ -145,3 +145,15 @@ if __name__ == "__main__":
     ## load data
     metadata = load(cfg=cfg, metadata=metadata, logger=logger, dvc=dvc)
     pprint(metadata)
+
+    # reinitialize to pull
+    # cfg = initialize_project(ROOT_DIR)
+    # gcs = GCS(
+    #     project_id=cfg.env.project_id,
+    #     google_application_credentials=cfg.env.google_application_credentials,
+    #     bucket_name=cfg.env.gcs_bucket_name,
+    # )
+    # dvc = SimpleDVC(data_dir=cfg.general.dirs.data.raw, storage=gcs)
+    # filename = "filtered_movies_incremental.csv"
+    # remote_project_name = "imdb"
+    # dvc.pull(filename=filename, remote_project_name=remote_project_name)
