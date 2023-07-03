@@ -825,3 +825,6 @@ MY_VARIABLE, whose value is "Hello, world!".
 
 This way, you can manage your Kubernetes secrets directly from your terminal,
 which can help you improve the efficiency of your Kubernetes workflows.
+
+
+The folder structure of the mock dataops pipeline (without additional packages like airbyte or dbt
