@@ -11,6 +11,22 @@ from pipeline_training.utils.common import get_file_format, get_file_size
 
 
 class Load:
+    """
+    Load class for loading data from metadata, saving it to a local file,
+    and optionally tracking the data file using DVC.
+
+    Parameters
+    ----------
+    cfg : Config
+        Config object containing the configuration parameters.
+    logger : Logger
+        Logger object for logging information and errors.
+    metadata : Metadata
+        Metadata object containing the data to be loaded.
+    dvc : SimpleDVC, optional
+        DVC object for data file tracking (default is None).
+    """
+
     def __init__(
         self,
         cfg: Config,
@@ -18,22 +34,6 @@ class Load:
         metadata: Metadata,
         dvc: Optional[SimpleDVC] = None,
     ) -> None:
-        """
-        Load class for loading data from metadata, saving it to a local file,
-        and optionally tracking the data file using DVC.
-
-        Parameters
-        ----------
-        cfg : Config
-            Config object containing the configuration parameters.
-        logger : Logger
-            Logger object for logging information and errors.
-        metadata : Metadata
-            Metadata object containing the data to be loaded.
-        dvc : SimpleDVC, optional
-            DVC object for data file tracking (default is None).
-        """
-
         self.cfg = cfg
         self.logger = logger
         self.metadata = metadata

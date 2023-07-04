@@ -175,4 +175,11 @@ class Preprocess:
             attr_dict.update(track_with_dvc_metadata)
         # update metadata
         self.metadata.set_attrs(attr_dict)
+
+        # release memory
+        self.logger.info(
+            "Preprocessing completed. Now releasing memory such as `raw_df`."
+        )
+        self.metadata.release("raw_df")
+        assert self.metadata.raw_df is None
         return self.metadata

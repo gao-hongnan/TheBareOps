@@ -93,3 +93,14 @@ pprint(metadata.processed_df.dtypes)
 # TODO: validate again
 
 # NOTE: resampling.py
+X = metadata.processed_df.drop(columns=["target"])
+
+# NOTE:
+# BASELINE MODEL
+# OPTIMIZE ON BASELINE MODEL
+# TRAIN MODEL WITH OPTIMIZED PARAMETERS
+# EVALUATE MODEL
+# VALIDATE MODEL
+# PUSH MODEL TO PRODUCTION IF SATISFACTORY
+# SERVE
+# MONITOR

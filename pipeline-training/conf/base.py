@@ -8,6 +8,7 @@ from conf.extract.base import Extract
 from conf.general.base import General
 from conf.load.base import Load
 from conf.preprocess.base import Preprocess
+from conf.resample.base import Resample
 
 RUN_ID = generate_uuid()
 
@@ -19,6 +20,7 @@ class Config(BaseModel):
     extract: Extract = Extract()
     load: Load = Load()
     preprocess: Preprocess = Preprocess()
+    resample: Resample = Resample()
     general: General = General()
 
 
