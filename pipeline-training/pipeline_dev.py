@@ -130,3 +130,4 @@ print(f"Accuracy: {accuracy}")
 # PUSH MODEL TO PRODUCTION IF SATISFACTORY
 # SERVE
 # MONITOR
+# CICD Trigger training -> Trigger Serving of Image
