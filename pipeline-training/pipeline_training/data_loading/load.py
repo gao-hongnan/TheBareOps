@@ -1,159 +1,147 @@
-import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional, Union
 
-import pandas as pd
-from common_utils.cloud.gcp.database.bigquery import BigQuery
-from common_utils.cloud.gcp.storage.gcs import GCS
-from common_utils.core.base import Connection
+from common_utils.core.decorators.timer import timer
 from common_utils.core.logger import Logger
 from common_utils.versioning.dvc.core import SimpleDVC
-from rich.pretty import pprint
 
-from conf.base import RUN_ID, Config
-from conf.directory.base import ROOT_DIR
+from conf.base import Config
 from metadata.core import Metadata
+from pipeline_training.utils.common import get_file_format, get_file_size
 
 
-def load(
-    cfg: Config,
-    metadata: Metadata,
-    logger: Logger,
-    dvc: Optional[SimpleDVC] = None,
-) -> Metadata:
-    """
-    This function loads data from the metadata into a CSV file, and
-    optionally tracks that file using Data Version Control (DVC).
+class Load:
+    def __init__(
+        self,
+        cfg: Config,
+        logger: Logger,
+        metadata: Metadata,
+        dvc: Optional[SimpleDVC] = None,
+    ) -> None:
+        """
+        Load class for loading data from metadata, saving it to a local file,
+        and optionally tracking the data file using DVC.
 
-    Design Principles:
-    ------------------
-    1. Single Responsibility Principle (SRP): This function solely
-       handles loading data and potentially tracking it with DVC.
+        Parameters
+        ----------
+        cfg : Config
+            Config object containing the configuration parameters.
+        logger : Logger
+            Logger object for logging information and errors.
+        metadata : Metadata
+            Metadata object containing the data to be loaded.
+        dvc : SimpleDVC, optional
+            DVC object for data file tracking (default is None).
+        """
 
-    2. Dependency Inversion Principle (DIP): Dependencies (logger,
-       directories, metadata, and optionally DVC) are passed as
-       arguments for better testability and flexibility.
+        self.cfg = cfg
+        self.logger = logger
+        self.metadata = metadata
+        self.dvc = dvc
 
-    3. Open-Closed Principle (OCP): The function supports optional DVC
-       tracking, showing it can be extended without modifying the
-       existing code. In other words, the function is open for
-       extension because it can be extended to support DVC tracking,
-       and closed for modification because the existing code does not
-       need to be modified to support DVC tracking.
+    def load_to_local(
+        self, table_name: str, output_filename: str
+    ) -> Dict[str, Union[int, str]]:
+        """
+        This function loads data from the metadata into a local CSV file, and
+        optionally tracks that file using Data Version Control (DVC).
 
-    4. Use of Type Hints: Type hints are used consistently for clarity
-       and to catch type-related errors early.
+        Design Principles:
+        ------------------
+        1. Single Responsibility Principle (SRP): This function solely
+        handles loading data and potentially tracking it with DVC.
 
-    5. Logging: Effective use of logging provides transparency and aids
-       in troubleshooting.
+        2. Dependency Inversion Principle (DIP): Dependencies (logger,
+        directories, metadata, and optionally DVC) are passed as
+        arguments for better testability and flexibility.
+
+        3. Open-Closed Principle (OCP): The function supports optional DVC
+        tracking, showing it can be extended without modifying the
+        existing code. In other words, the function is open for
+        extension because it can be extended to support DVC tracking,
+        and closed for modification because the existing code does not
+        need to be modified to support DVC tracking.
+
+        4. Use of Type Hints: Type hints are used consistently for clarity
+        and to catch type-related errors early.
+
+        5. Logging: Effective use of logging provides transparency and aids
+        in troubleshooting.
 
 
-    Areas of Improvement:
-    ---------------------
-    1. Exception Handling: More specific exception handling could
-       improve error management.
+        Areas of Improvement:
+        ---------------------
+        1. Exception Handling: More specific exception handling could
+        improve error management.
 
-    2. Liskov Substitution Principle (LSP): Using interfaces or base
-       classes for the inputs could enhance flexibility and adherence
-       to LSP.
+        2. Liskov Substitution Principle (LSP): Using interfaces or base
+        classes for the inputs could enhance flexibility and adherence
+        to LSP.
 
-    3. Encapsulation: Consider if direct manipulation of `metadata`
-       attributes should be encapsulated within `metadata` methods.
+        3. Encapsulation: Consider if direct manipulation of `metadata`
+        attributes should be encapsulated within `metadata` methods.
+        """
+        self.logger.info("Reading data from metadata computed in the previous step...")
+        raw_df = self.metadata.raw_df
 
-    Parameters
-    ----------
-    cfg: Config
-        The Config object containing the configuration parameters.
-    metadata: Metadata
-        The Metadata object containing the data to be loaded.
-    logger: Logger
-        The Logger object for logging information and errors.
-    dvc: Optional[SimpleDVC]
-        The optional DVC object for data file tracking.
+        assert (
+            table_name == self.metadata.raw_table_name
+        ), f"Table name mismatch: Expected {self.metadata.raw_table_name}, got {table_name}."
 
-    Returns
-    -------
-    Metadata
-        The Metadata object with updated information.
-    """
-    logger.info("Reading data from metadata computed in the previous step...")
-    raw_df = metadata.raw_df
-    table_name = metadata.raw_table_name
-    filepath: Path = cfg.dirs.data.raw / f"{table_name}.csv"
+        filepath: Path = self.cfg.dirs.data.raw / f"{output_filename}.csv"
 
-    raw_df.to_csv(filepath, index=False)
+        raw_df.to_csv(filepath, index=False)
 
-    if dvc is not None:
+        attr_dict = {
+            "raw_file_size": get_file_size(filepath),
+            "raw_file_format": get_file_format(filepath),
+            "raw_file_path": str(filepath),
+        }
+        return attr_dict
+
+    def track_with_dvc(self, filepath: Path) -> Dict[str, Dict[str, Any]]:
+        """
+        Adds a local file to DVC and attempts to push it.
+
+        Parameters
+        ----------
+        filepath : Path
+            Path to the file to be added to DVC.
+
+        Returns
+        -------
+        Dict[str, Any]
+            A dictionary containing the metadata returned by DVC.
+        """
         # add local file to dvc
-        raw_dvc_metadata = dvc.add(filepath)
+        raw_dvc_metadata = self.dvc.add(filepath)
         try:
-            dvc.push(filepath)
+            self.dvc.push(filepath)
         except Exception as error:  # pylint: disable=broad-except
-            logger.error(f"File is already tracked by DVC. Error: {error}")
+            self.logger.error(f"File is already tracked by DVC. Error: {error}")
 
-    attr_dict = {
-        "raw_file_size": filepath.stat().st_size,
-        "raw_file_format": filepath.suffix[1:],
-        "raw_dvc_metadata": raw_dvc_metadata if dvc is not None else None,
-    }
-    metadata.set_attrs(attr_dict)
-    return metadata
+        attr_dict = {"raw_dvc_metadata": raw_dvc_metadata}
+        return attr_dict
 
+    @timer(display_table=True)
+    def run(self) -> Metadata:
+        """
+        Executes the data loading and optional DVC tracking process.
 
-if __name__ == "__main__":
-    cfg = Config()
+        Returns
+        -------
+        Metadata
+            The updated Metadata object with information about the
+            loaded and optionally DVC-tracked file.
+        """
+        load_to_local_metadata = self.load_to_local(
+            **self.cfg.load.load_to_local.model_dump(mode="python")
+        )
 
-    logger = Logger(
-        log_file="pipeline_training.log",
-        log_root_dir=cfg.dirs.stores.logs,
-        module_name=__name__,
-        propagate=False,
-        level=logging.DEBUG,
-    ).logger
-
-    metadata = Metadata()
-
-    connection = BigQuery(
-        project_id=cfg.env.project_id,
-        google_application_credentials=cfg.env.google_application_credentials,
-        dataset=cfg.env.bigquery_transformed_dataset,
-        table_name=cfg.env.bigquery_transformed_table_name,
-    )
-
-    storage = GCS(
-        project_id=cfg.env.project_id,
-        google_application_credentials=cfg.env.google_application_credentials,
-        bucket_name=cfg.env.gcs_bucket_name,
-    )
-
-    dvc = SimpleDVC(
-        storage=storage,
-        remote_bucket_project_name=cfg.env.gcs_bucket_project_name,
-        data_dir=cfg.dirs.data.raw,
-        metadata_dir=cfg.dirs.stores.blob.raw,
-    )
-
-    from pipeline_training.data_extraction.extract import (
-        test_extract_from_data_warehouse,
-    )
-
-    ## extract data from data warehouse
-    metadata = test_extract_from_data_warehouse(
-        cfg=cfg, metadata=metadata, logger=logger, connection=connection
-    )
-
-    ## load data
-    metadata = load(cfg=cfg, metadata=metadata, logger=logger, dvc=dvc)
-    pprint(metadata)
-
-    # reinitialize to pull
-    # cfg = initialize_project(ROOT_DIR)
-    # gcs = GCS(
-    #     project_id=cfg.env.project_id,
-    #     google_application_credentials=cfg.env.google_application_credentials,
-    #     bucket_name=cfg.env.gcs_bucket_name,
-    # )
-    # dvc = SimpleDVC(data_dir=cfg.general.dirs.data.raw, storage=gcs)
-    # filename = "filtered_movies_incremental.csv"
-    # remote_project_name = "imdb"
-    # dvc.pull(filename=filename, remote_project_name=remote_project_name)
+        if self.dvc is not None:
+            track_with_dvc_metadata = self.track_with_dvc(
+                Path(load_to_local_metadata["raw_file_path"])
+            )
+            load_to_local_metadata.update(track_with_dvc_metadata)
+        self.metadata.set_attrs(load_to_local_metadata)
+        return self.metadata

@@ -15,7 +15,7 @@ class ExtractFromDataWarehouse(BaseModel):
     query: str = Field(
         default="""
     SELECT *
-    FROM `gao-hongnan.thebareops_production.processed_binance_btcusdt_spot` t
+    FROM `gao-hongnan.thebareops_production.raw_binance_btcusdt_spot` t
     WHERE t.utc_datetime > DATETIME(TIMESTAMP "2023-06-09 00:00:00 UTC")
     ORDER BY t.utc_datetime DESC
     LIMIT 1000;
@@ -39,8 +39,3 @@ class Extract(BaseModel):
         default=ExtractFromDataWarehouse(),
         description="Instance of ExtractFromDataWarehouse.",
     )
-
-
-if __name__ == "__main__":
-    extract = Extract()
-    pprint(extract)

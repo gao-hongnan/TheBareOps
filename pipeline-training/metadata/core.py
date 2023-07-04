@@ -14,7 +14,8 @@ import pytz
 # mutable
 @dataclass(frozen=False)
 class Metadata:
-    # tracks the inner state of the pipeline, update as it traverses the pipeline.
+    """Tracks the inner state of the pipeline, update as it traverses the pipeline."""
+
     # e.g. if the pipeline fails at a certain stage, we can use this to restart
     # from that stage.
 
@@ -36,13 +37,15 @@ class Metadata:
     # inside load.py
     raw_file_size: int = None
     raw_file_format: str = None
+    raw_filepath: str = None
     raw_dvc_metadata: Dict[str, Any] = None
 
-    # inside transform.py
+    # inside preprocess.py
     processed_df: pd.DataFrame = None
     processed_num_rows: int = None
     processed_num_cols: int = None
     processed_file_size: int = None
+    processed_file_format: str = None
     processed_dvc_metadata: Dict[str, Any] = None
 
     # inside resampling.py
@@ -60,6 +63,7 @@ class Metadata:
     best_params: Dict[str, Any] = None
 
     def release(self, attribute: str) -> Any:
+        """Releases an attribute from the Metadata instance."""
         self.__setattr__(attribute, None)
 
     def set_attrs(self, attr_dict: Dict[str, Any]):

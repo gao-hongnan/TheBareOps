@@ -14,7 +14,8 @@ import pytz
 # mutable
 @dataclass(frozen=False)
 class Metadata:
-    # tracks the inner state of the pipeline, update as it traverses the pipeline.
+    """Tracks the inner state of the pipeline, update as it traverses the pipeline."""
+
     # e.g. if the pipeline fails at a certain stage, we can use this to restart
     # from that stage.
 
@@ -44,6 +45,8 @@ class Metadata:
     pipeline_time_taken: float = None
 
     def release(self, attribute: str) -> Any:
+        """Releases an attribute from the Metadata instance."""
+        self.__setattr__(attribute, None)
         self.__setattr__(attribute, None)
 
     def set_attrs(self, attr_dict: Dict[str, Any]):
