@@ -117,6 +117,7 @@ class Load:
         raw_dvc_metadata = self.dvc.add(filepath)
         try:
             self.dvc.push(filepath)
+            self.logger.info("File added to DVC and pushed to remote.")
         except Exception as error:  # pylint: disable=broad-except
             self.logger.error(f"File is already tracked by DVC. Error: {error}")
 

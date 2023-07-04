@@ -7,14 +7,14 @@ from common_utils.cloud.gcp.storage.gcs import GCS
 from common_utils.core.base import Connection, Storage
 from common_utils.core.common import seed_all
 from common_utils.core.logger import Logger
-
 from conf.base import RUN_ID, Config
 from conf.directory.base import ROOT_DIR
 from metadata.core import Metadata
 from pipeline_dataops.extract.core import from_api, interval_to_milliseconds
 from pipeline_dataops.load.core import to_bigquery, to_google_cloud_storage
 from pipeline_dataops.transform.core import cast_columns
-from pipeline_dataops.validate.core import validate_non_null_columns, validate_schema
+from pipeline_dataops.validate.core import (validate_non_null_columns,
+                                            validate_schema)
 from schema.core import RawSchema, TransformedSchema
 
 # pylint: disable=no-member,logging-fstring-interpolation,invalid-name

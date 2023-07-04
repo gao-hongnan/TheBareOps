@@ -2,14 +2,10 @@ from unittest import mock
 
 import pytest
 import requests
-
-from pipeline_dataops.extract.core import (
-    execute_request,
-    get_url,
-    handle_response,
-    interval_to_milliseconds,
-    prepare_params,
-)
+from pipeline_dataops.extract.core import (execute_request, get_url,
+                                           handle_response,
+                                           interval_to_milliseconds,
+                                           prepare_params)
 
 
 @pytest.mark.skip(reason="Not implemented yet")

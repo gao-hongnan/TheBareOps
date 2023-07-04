@@ -15,6 +15,8 @@ RUN_ID = generate_uuid()
 
 # TODO: explore how to use model_post_init to make run_id inside Config
 class Config(BaseModel):
+    """Main configuration class that compose all the other configuration classes."""
+
     dirs: Directories = Directories.create_instance(ROOT_DIR, RUN_ID)
     env: Environment = Environment.create_instance()
     extract: Extract = Extract()

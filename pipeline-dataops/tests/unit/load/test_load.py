@@ -2,7 +2,6 @@ from unittest import mock
 
 import pytest
 import requests
-
 from pipeline_dataops.load.core import to_bigquery, to_google_cloud_storage
 
 

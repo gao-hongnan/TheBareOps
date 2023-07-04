@@ -1,9 +1,8 @@
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Dict, List, Union
+from dataclasses import dataclass
+from typing import Any, Dict, Union
 
+import numpy as np
 import pandas as pd
-import pytz
 
 # TODO: Compose Metadata in a similar way as Config instead of scattering.
 # TODO: Add more metadata attributes, for example the GCS path that stores
@@ -47,6 +46,8 @@ class Metadata:
     processed_file_size: int = None
     processed_file_format: str = None
     processed_dvc_metadata: Dict[str, Any] = None
+    X: Union[pd.DataFrame, np.ndarray] = None
+    y: Union[pd.DataFrame, np.ndarray] = None
 
     # inside resampling.py
     X_train: pd.DataFrame = None

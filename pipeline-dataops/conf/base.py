@@ -1,12 +1,11 @@
 from common_utils.core.common import generate_uuid
-from pydantic import BaseModel
-from rich.pretty import pprint
-
 from conf.directory.base import ROOT_DIR, Directories
 from conf.environment.base import Environment
 from conf.extract.base import Extract
 from conf.general.base import General
 from conf.transform.base import Transform
+from pydantic import BaseModel
+from rich.pretty import pprint
 
 RUN_ID = generate_uuid()
 

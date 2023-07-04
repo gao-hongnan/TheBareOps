@@ -5,8 +5,6 @@ from typing import Literal, Optional
 import pandas as pd
 from common_utils.cloud.gcp.database.bigquery import BigQuery
 from common_utils.cloud.gcp.storage.gcs import GCS
-from common_utils.core.base import Connection
-from common_utils.core.decorators.timer import timer
 from common_utils.core.logger import Logger
 from common_utils.data_validator.core import DataFrameValidator
 from common_utils.versioning.dvc.core import SimpleDVC
@@ -17,6 +15,7 @@ from metadata.core import Metadata
 from pipeline_training.data_extraction.extract import Extract
 from pipeline_training.data_loading.load import Load
 from pipeline_training.data_preprocessing.preprocess import Preprocess
+from pipeline_training.data_resampling.resampling import get_data_splits
 from schema.core import RawSchema, TransformedSchema
 
 # pylint: disable=no-member
@@ -65,7 +64,7 @@ metadata = load.run()
 pprint(metadata)
 
 expected_raw_schema = RawSchema.to_pd_dtypes()
-pprint(expected_raw_schema)
+# pprint(expected_raw_schema)
 
 validator = DataFrameValidator(df=metadata.raw_df, schema=expected_raw_schema)
 validator.validate_schema().validate_data_types().validate_missing()
@@ -85,15 +84,42 @@ validator.validate_schema().validate_data_types().validate_missing()
 # dvc.pull(filename=filename, remote_project_name=remote_project_name)
 
 # NOTE: preprocess.py
-preprocess = Preprocess(cfg=cfg, metadata=metadata, logger=logger)
+dvc = SimpleDVC(
+    storage=storage,
+    remote_bucket_project_name=cfg.env.gcs_bucket_project_name,
+    data_dir=cfg.dirs.data.processed,
+    metadata_dir=cfg.dirs.stores.blob.processed,
+)
+preprocess = Preprocess(cfg=cfg, metadata=metadata, logger=logger, dvc=dvc)
 metadata = preprocess.run()
 pprint(metadata.processed_df)
-pprint(metadata.processed_df.dtypes)
+# pprint(metadata.processed_df.dtypes)
 
 # TODO: validate again
 
 # NOTE: resampling.py
-X = metadata.processed_df.drop(columns=["target"])
+X = metadata.X
+y = metadata.y
+
+metadata = get_data_splits(cfg, metadata, X, y)
+X_train, X_test, y_train, y_test = (
+    metadata.X_train,
+    metadata.X_test,
+    metadata.y_train,
+    metadata.y_test,
+)
+
+from sklearn.ensemble import RandomForestClassifier
+
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+from sklearn.metrics import accuracy_score
+
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+
+print(f"Accuracy: {accuracy}")
+# TODO: Make resample a class and log data splits as method.
 
 # NOTE:
 # BASELINE MODEL

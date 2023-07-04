@@ -2,7 +2,6 @@ from unittest import mock
 
 import pandas as pd
 import pytest
-
 from metadata.core import Metadata
 from pipeline_dataops.extract.core import from_api
 

@@ -9,10 +9,9 @@ from common_utils.cloud.gcp.database.bigquery import BigQuery
 from common_utils.cloud.gcp.storage.gcs import GCS
 from common_utils.core.common import seed_all
 from common_utils.core.logger import Logger
-from rich.pretty import pprint
-
 from conf.base import Config
 from metadata.core import Metadata
+from rich.pretty import pprint
 
 # pylint: disable=invalid-name
 

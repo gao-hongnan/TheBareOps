@@ -6,9 +6,8 @@ from typing import Literal, Optional, Type
 
 import rich
 from common_utils.core.common import load_env_vars
-from pydantic import BaseModel, Field
-
 from conf.directory.base import ROOT_DIR
+from pydantic import BaseModel, Field
 
 
 def is_docker() -> Literal[True, False]:
