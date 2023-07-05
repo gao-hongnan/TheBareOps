@@ -6,8 +6,8 @@ on:
     branches:
       - main
     paths-ignore:
-      - '**/*.md'
-      - '**/.gitignore'
+      - "**/*.md"
+      - "**/.gitignore"
 
 jobs:
   deploy_dataops_pipeline:
@@ -22,13 +22,13 @@ jobs:
       BIGQUERY_RAW_DATASET: ${{ secrets.BIGQUERY_RAW_DATASET }}
       BIGQUERY_RAW_TABLE_NAME: ${{ secrets.BIGQUERY_RAW_TABLE_NAME }}
       BIGQUERY_TRANSFORMED_DATASET: ${{ secrets.BIGQUERY_TRANSFORMED_DATASET }}
-      BIGQUERY_TRANSFORMED_TABLE: ${{ secrets.BIGQUERY_TRANSFORMED_TABLE }}
+      BIGQUERY_TRANSFORMED_TABLE_NAME: ${{ secrets.BIGQUERY_TRANSFORMED_TABLE_NAME }}
       HOME_DIR: ${{ secrets.HOME_DIR }}
-      REPO_NAME: ${{ secrets.GOOGLE_ARTIFACTS_REGISTRY_REPO_NAME }}  # Set this to your Artifact Registry repository name
-      REGION: ${{ secrets.REGION }}  # Set this to your Artifact Registry region
+      REPO_NAME: ${{ secrets.GOOGLE_ARTIFACTS_REGISTRY_REPO_NAME }} # Set this to your Artifact Registry repository name
+      REGION: ${{ secrets.REGION }} # Set this to your Artifact Registry region
       GIT_COMMIT_HASH: ${{ github.sha }} # may not be needed
-      IMAGE_NAME: pipeline-dataops  # Define IMAGE_NAME here
-      IMAGE_TAG: ${{ github.sha }}  # Define IMAGE_TAG here
+      IMAGE_NAME: pipeline-dataops # Define IMAGE_NAME here
+      IMAGE_TAG: ${{ github.sha }} # Define IMAGE_TAG here
       GKE_CLUSTER: autopilot-cluster-2
       GKE_ZONE: asia-southeast1
       GKE_SECRET_NAME: pipeline-dataops-secret
@@ -37,79 +37,79 @@ jobs:
       GKE_MANIFEST_PATH: pipeline-dataops/scripts/k8s/dataops/manifests/dataops_cronjob.yaml
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0.2.0
-      with:
-        project_id: ${{ env.PROJECT_ID }}
-        service_account_key: ${{ env.GOOGLE_SERVICE_ACCOUNT_KEY }}
-        export_default_credentials: true
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0.2.0
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          service_account_key: ${{ env.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          export_default_credentials: true
 
-    - name: Create Artifact Registry Repository
-      run: |
-        echo "Checking if Artifact Registry Repository exists..."
-        if ! gcloud artifacts repositories describe ${{ env.REPO_NAME }} --location=${{ env.REGION }}; then
-          echo "Creating Artifact Registry Repository..."
-          gcloud artifacts repositories create ${{ env.REPO_NAME }} \
-              --repository-format=docker \
-              --location=${{ env.REGION }} \
-              --description="Docker repository for storing images"
-        else
-          echo "Artifact Registry Repository already exists. Skipping creation."
-        fi
+      - name: Create Artifact Registry Repository
+        run: |
+          echo "Checking if Artifact Registry Repository exists..."
+          if ! gcloud artifacts repositories describe ${{ env.REPO_NAME }} --location=${{ env.REGION }}; then
+            echo "Creating Artifact Registry Repository..."
+            gcloud artifacts repositories create ${{ env.REPO_NAME }} \
+                --repository-format=docker \
+                --location=${{ env.REGION }} \
+                --description="Docker repository for storing images"
+          else
+            echo "Artifact Registry Repository already exists. Skipping creation."
+          fi
 
-    - name: Authenticate Docker for Artifact Registry
-      run: |
-        echo "Configuring Docker for Artifact Registry..."
-        gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+      - name: Authenticate Docker for Artifact Registry
+        run: |
+          echo "Configuring Docker for Artifact Registry..."
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-    - name: Build Docker image
-      run: |
-        echo "Building Docker image..."
-        cd pipeline-dataops
-        docker build \
-        --build-arg GIT_COMMIT_HASH=${{ env.IMAGE_TAG }} \
-        -f Dockerfile \
-        -t "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}" \
-        .
+      - name: Build Docker image
+        run: |
+          echo "Building Docker image..."
+          cd pipeline-dataops
+          docker build \
+          --build-arg GIT_COMMIT_HASH=${{ env.IMAGE_TAG }} \
+          -f Dockerfile \
+          -t "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}" \
+          .
 
-    - name: Push Docker image to Google Artifact Registry
-      run: |
-        echo "Pushing Docker image..."
-        docker push \
-        "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
-        echo "Successfully pushed Docker image to Artifact Registry"
+      - name: Push Docker image to Google Artifact Registry
+        run: |
+          echo "Pushing Docker image..."
+          docker push \
+          "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
+          echo "Successfully pushed Docker image to Artifact Registry"
 
-    - name: Authenticate GKE credentials
-      uses: google-github-actions/get-gke-credentials@v1
-      with:
-        project_id: ${{ env.PROJECT_ID }}
-        location: ${{ env.GKE_ZONE }}
-        cluster_name: ${{ env.GKE_CLUSTER }}
-        credentials: ${{ env.GOOGLE_SERVICE_ACCOUNT_KEY }}
+      - name: Authenticate GKE credentials
+        uses: google-github-actions/get-gke-credentials@v1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          location: ${{ env.GKE_ZONE }}
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          credentials: ${{ env.GOOGLE_SERVICE_ACCOUNT_KEY }}
 
-    - name: Apply ConfigMap
-      run: |
-        echo "Applying ConfigMap..."
-        kubectl apply -f ${{ env.GKE_CONFIG_MAP_PATH }}
+      - name: Apply ConfigMap
+        run: |
+          echo "Applying ConfigMap..."
+          kubectl apply -f ${{ env.GKE_CONFIG_MAP_PATH }}
 
-    - name: Create and Apply secret YAML
-      run: |
-        mkdir -p pipeline-dataops/scripts/k8s/dataops/secrets
-        kubectl create secret generic ${{ env.GKE_SECRET_NAME }} \
-        --from-literal=GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64 }} \
-        --dry-run=client \
-        -o yaml > ${{ env.GKE_SECRET_PATH }} && \
-        echo "Applying secret YAML..." && \
-        kubectl apply -f ${{ env.GKE_SECRET_PATH }}
+      - name: Create and Apply secret YAML
+        run: |
+          mkdir -p pipeline-dataops/scripts/k8s/dataops/secrets
+          kubectl create secret generic ${{ env.GKE_SECRET_NAME }} \
+          --from-literal=GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64 }} \
+          --dry-run=client \
+          -o yaml > ${{ env.GKE_SECRET_PATH }} && \
+          echo "Applying secret YAML..." && \
+          kubectl apply -f ${{ env.GKE_SECRET_PATH }}
 
-    - name: Deploy to Google Kubernetes Engine
-      run: |
-        echo "Deploying to Google Kubernetes Engine..."
-        # Replace the image in the Kubernetes manifest
-        sed -i 's|us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:.*|'"${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"'|' ${{ env.GKE_MANIFEST_PATH }}
-        # Apply the Kubernetes manifest
-        kubectl apply -f ${{ env.GKE_MANIFEST_PATH }}
-        echo "Successfully deployed to GKE"
+      - name: Deploy to Google Kubernetes Engine
+        run: |
+          echo "Deploying to Google Kubernetes Engine..."
+          # Replace the image in the Kubernetes manifest
+          sed -i 's|us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:.*|'"${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"'|' ${{ env.GKE_MANIFEST_PATH }}
+          # Apply the Kubernetes manifest
+          kubectl apply -f ${{ env.GKE_MANIFEST_PATH }}
+          echo "Successfully deployed to GKE"

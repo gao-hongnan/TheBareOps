@@ -9,4 +9,4 @@ data:
   BIGQUERY_RAW_DATASET: "thebareops_production"
   BIGQUERY_RAW_TABLE_NAME: "raw_binance_btcusdt_spot"
   BIGQUERY_TRANSFORMED_DATASET: "thebareops_production"
-  BIGQUERY_TRANSFORMED_TABLE: "processed_binance_btcusdt_spot"
+  BIGQUERY_TRANSFORMED_TABLE_NAME: "processed_binance_btcusdt_spot"

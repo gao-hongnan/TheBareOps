@@ -109,7 +109,7 @@ docker run -it \
   --env BIGQUERY_RAW_DATASET=thebareops_production \
   --env BIGQUERY_RAW_TABLE_NAME=raw_binance_btcusdt_spot \
   --env BIGQUERY_TRANSFORMED_DATASET=thebareops_production \
-  --env BIGQUERY_TRANSFORMED_TABLE=processed_binance_btcusdt_spot \
+  --env BIGQUERY_TRANSFORMED_TABLE_NAME=processed_binance_btcusdt_spot \
   --name $IMAGE_NAME \
   $IMAGE_NAME:$IMAGE_TAG
 ```
@@ -139,7 +139,7 @@ docker run -it \
   --env BIGQUERY_RAW_DATASET=thebareops_production \
   --env BIGQUERY_RAW_TABLE_NAME=raw_binance_btcusdt_spot \
   --env BIGQUERY_TRANSFORMED_DATASET=thebareops_production \
-  --env BIGQUERY_TRANSFORMED_TABLE=processed_binance_btcusdt_spot \
+  --env BIGQUERY_TRANSFORMED_TABLE_NAME=processed_binance_btcusdt_spot \
   --name $IMAGE_NAME \
   us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:$IMAGE_TAG
 ```

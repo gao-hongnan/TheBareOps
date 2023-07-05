@@ -49,7 +49,7 @@ class Environment(BaseModel):
     )
 
     bigquery_transformed_table_name: Optional[str] = Field(
-        default=os.getenv("BIGQUERY_TRANSFORMED_TABLE"),
+        default=os.getenv("BIGQUERY_TRANSFORMED_TABLE_NAME"),
         description="BigQuery Processed Table Name",
     )
 
@@ -66,7 +66,9 @@ class Environment(BaseModel):
             bigquery_raw_dataset=os.getenv("BIGQUERY_RAW_DATASET"),
             bigquery_raw_table_name=os.getenv("BIGQUERY_RAW_TABLE_NAME"),
             bigquery_transformed_dataset=os.getenv("BIGQUERY_TRANSFORMED_DATASET"),
-            bigquery_transformed_table_name=os.getenv("BIGQUERY_TRANSFORMED_TABLE"),
+            bigquery_transformed_table_name=os.getenv(
+                "BIGQUERY_TRANSFORMED_TABLE_NAME"
+            ),
         )
 
     class Config:

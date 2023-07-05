@@ -50,11 +50,11 @@ spec:
                     configMapKeyRef:
                       name: pipeline-dataops-config
                       key: BIGQUERY_TRANSFORMED_DATASET
-                - name: BIGQUERY_TRANSFORMED_TABLE
+                - name: BIGQUERY_TRANSFORMED_TABLE_NAME
                   valueFrom:
                     configMapKeyRef:
                       name: pipeline-dataops-config
-                      key: BIGQUERY_TRANSFORMED_TABLE
+                      key: BIGQUERY_TRANSFORMED_TABLE_NAME
                 - name: GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64
                   valueFrom:
                     secretKeyRef:
