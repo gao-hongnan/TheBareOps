@@ -23,7 +23,7 @@ class Config(BaseModel):
     load: Load = Load()
     preprocess: Preprocess = Preprocess()
     resample: Resample = Resample()
-    general: General = General()
+    general: General = General(pipeline_name="pipeline-training")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,6 @@
+"""Pipeline class that handles the entire ELT process. It can be treated as a DAG."""
 import logging
+import pickle
 import time
 
 import pandas as pd
@@ -7,14 +9,14 @@ from common_utils.cloud.gcp.storage.gcs import GCS
 from common_utils.core.base import Connection, Storage
 from common_utils.core.common import seed_all
 from common_utils.core.logger import Logger
+
 from conf.base import RUN_ID, Config
 from conf.directory.base import ROOT_DIR
 from metadata.core import Metadata
 from pipeline_dataops.extract.core import from_api, interval_to_milliseconds
 from pipeline_dataops.load.core import to_bigquery, to_google_cloud_storage
 from pipeline_dataops.transform.core import cast_columns
-from pipeline_dataops.validate.core import (validate_non_null_columns,
-                                            validate_schema)
+from pipeline_dataops.validate.core import validate_non_null_columns, validate_schema
 from schema.core import RawSchema, TransformedSchema
 
 # pylint: disable=no-member,logging-fstring-interpolation,invalid-name
@@ -88,7 +90,14 @@ class Pipeline:
         return self.connection.check_if_table_exists()
 
     def validate_raw(self, df: pd.DataFrame) -> None:
-        """Validate the raw data."""
+        """
+        Validate the raw data against a predefined schema.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame with raw data to validate.
+        """
         self.logger.info("Validating raw schema...")
         validate_schema(logger=self.logger, df=df, validator=RawSchema)
         self.logger.info("✅ Raw schema is valid.")
@@ -100,7 +109,14 @@ class Pipeline:
         self.logger.info("✅ There are no null values in the specified columns.")
 
     def validate_transformed(self, df: pd.DataFrame) -> None:
-        """Validate the transformed data."""
+        """
+        Validate the transformed data against a predefined schema.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame with transformed data to validate.
+        """
         self.logger.info("Validating transformed schema...")
         validate_schema(logger=self.logger, df=df, validator=TransformedSchema)
         self.logger.info("✅ Transformed schema is valid.")
@@ -114,7 +130,15 @@ class Pipeline:
         self.logger.info("✅ There are no null values in the specified columns.")
 
     def initial_extract_and_load_and_transform(self) -> Metadata:
-        """Do not need to return Metadata since it is an initial extract."""
+        """
+        Execute initial extract, load, and transform operations. Assumes
+        it is the first run.
+
+        Returns
+        -------
+        Metadata
+            Updated metadata after operations.
+        """
         if not self.bucket_exists():
             self.storage.create_bucket()
 
@@ -180,19 +204,42 @@ class Pipeline:
         return metadata
 
     def is_first_run(self) -> bool:
+        """
+        Check if the current run is the first by checking if the connection's
+        dataset and table exists.
+
+        Returns
+        -------
+        bool
+            True if it's the first run, False otherwise.
+        """
         return not self.dataset_exists() or not self.table_exists()
 
     @property
     def max_open_time_query(self) -> str:
+        """
+        SQL Query to fetch the maximum open_date.
+
+        Returns
+        -------
+        str
+            String SQL query.
+        """
         return f"""
         SELECT MAX(open_time) as max_open_time
         FROM `{bq.table_id}`
         """
 
     def extract(self) -> Metadata:
-        """This method assumes that the dataset and table already exist and they
-        are already populated with data. This method will only extract the data
-        from the maximum open_date onwards."""
+        """
+        Extract data from the API from the maximum open_date onwards.
+        Assumes dataset and table already exist and populated.
+
+        Returns
+        -------
+        Metadata
+            Updated metadata after the extraction.
+        """
         self.logger.info("Extracting data from API")
 
         # Query to find the maximum open_date
@@ -219,9 +266,22 @@ class Pipeline:
         return metadata
 
     def load(self, metadata: Metadata) -> Metadata:
+        """
+        Load data to Google Cloud Storage and BigQuery.
+
+        Parameters
+        ----------
+        metadata : Metadata
+            Updated metadata after extraction operation.
+
+        Returns
+        -------
+        Metadata
+            Updated metadata after the load operation.
+        """
         raw_df = metadata.raw_df
 
-        # call it so that it persists across the next few lines
+        # define it here so that it persists across the next few lines
         updated_at = metadata.updated_at
 
         blob = to_google_cloud_storage(
@@ -238,6 +298,19 @@ class Pipeline:
         return metadata
 
     def transform(self, metadata: Metadata) -> Metadata:
+        """
+        Perform the data transformation and load to Google Cloud Storage and BigQuery.
+
+        Parameters
+        ----------
+        metadata : Metadata
+            Metadata with raw extracted data.
+
+        Returns
+        -------
+        Metadata
+            Updated metadata with transformed data.
+        """
         # TODO: consider update updated_at in transform instead of using
         # the updated_at from the extract.
         transformed_df = cast_columns(
@@ -269,10 +342,39 @@ class Pipeline:
         metadata.set_attrs(metadata_dict)
         return metadata
 
+    def upload_metadata_to_artifacts(self, metadata: Metadata) -> None:
+        """Upload the metadata object to the artifacts directory locally and
+        then upload stores directory (artifacts is a subdirectory of stores) to
+        Storage."""
+        # Serialize the metadata object
+        local_metadata_path = f"{self.cfg.dirs.stores.artifacts}/metadata.pkl"
+        with open(local_metadata_path, "wb") as file:
+            pickle.dump(metadata, file)
+
+    def upload_config_to_artifacts(self, config: Config) -> None:
+        """Upload the config object to the artifacts directory locally and
+        then upload stores directory (artifacts is a subdirectory of stores) to
+        Storage."""
+        # Serialize the config object
+        local_config_path = f"{self.cfg.dirs.stores.artifacts}/config.pkl"
+        with open(local_config_path, "wb") as file:
+            pickle.dump(config, file)
+
+    def upload_stores(self) -> None:
+        """Upload the stores directory to Storage."""
+        self.storage.upload_directory(
+            source_dir=str(self.cfg.dirs.stores.base),
+            destination_dir=(
+                f"{self.cfg.env.gcs_bucket_project_name}/"
+                f"{self.cfg.general.pipeline_name}/{RUN_ID}"
+            ),
+        )
+
     def run(self) -> Metadata:
         """
-        Run the entire pipeline from data extraction, loading, transformation to
-        validation.
+        Execute the entire pipeline, which includes extraction,
+        validation, loading, transformation, and updating metadata.
+
 
         Returns
         -------
@@ -310,16 +412,23 @@ class Pipeline:
         metadata.set_attrs({"pipeline_time_taken": pipeline_time_taken})
         self.logger.info("Pipeline run successful. Time taken: %s", pipeline_time_taken)
 
+        self.logger.info("Uploading config to local artifacts directory.")
+        self.upload_config_to_artifacts(config=self.cfg)
+
+        self.logger.info("Uploading metadata to local artifacts directory.")
+        self.upload_metadata_to_artifacts(metadata=metadata)
+
+        self.logger.info("Uploading stores directory to Storage.")
+        self.upload_stores()
+
         return metadata
 
 
 if __name__ == "__main__":
     cfg = Config()
-    # pprint(cfg)
     seed_all(cfg.general.seed)
 
     metadata = Metadata()
-    # pprint(metadata)
 
     logger = Logger(
         log_file="pipeline_training.log",

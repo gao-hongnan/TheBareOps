@@ -3,6 +3,7 @@ from typing import List
 
 import pandas as pd
 from google.cloud import bigquery
+
 from schema.base import BaseSchema
 
 

@@ -105,7 +105,7 @@ docker run -it \
   --env GOOGLE_APPLICATION_CREDENTIALS="${HOME_DIR}/gcp-storage-service-account.json" \
   --env GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=$GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64 \
   --env GCS_BUCKET_NAME="gaohn" \
-  --env GCS_BUCKET_PROJECT_NAME="" \
+  --env GCS_BUCKET_PROJECT_NAME="thebareops_production" \
   --env BIGQUERY_RAW_DATASET=thebareops_production \
   --env BIGQUERY_RAW_TABLE_NAME=raw_binance_btcusdt_spot \
   --env BIGQUERY_TRANSFORMED_DATASET=thebareops_production \
@@ -135,7 +135,7 @@ docker run -it \
   --env GOOGLE_APPLICATION_CREDENTIALS="${HOME_DIR}/gcp-storage-service-account.json" \
   --env GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=$GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64 \
   --env GCS_BUCKET_NAME="gaohn" \
-  --env GCS_BUCKET_PROJECT_NAME="" \
+  --env GCS_BUCKET_PROJECT_NAME="thebareops_production" \
   --env BIGQUERY_RAW_DATASET=thebareops_production \
   --env BIGQUERY_RAW_TABLE_NAME=raw_binance_btcusdt_spot \
   --env BIGQUERY_TRANSFORMED_DATASET=thebareops_production \
