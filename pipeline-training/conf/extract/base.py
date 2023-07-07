@@ -18,7 +18,7 @@ class ExtractFromDataWarehouse(BaseModel):
     FROM `gao-hongnan.thebareops_production.raw_binance_btcusdt_spot` t
     WHERE t.utc_datetime > DATETIME(TIMESTAMP "2023-06-09 00:00:00 UTC")
     ORDER BY t.utc_datetime DESC
-    LIMIT 1000;
+    LIMIT 3000;
     """,
         description="SQL query to fetch data from the database.",
     )

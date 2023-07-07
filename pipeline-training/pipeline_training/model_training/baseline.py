@@ -22,9 +22,3 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 
 from pipeline_training.utils.common import log_data_splits_summary
-
-
-def create_model(model_config: Dict[str, Any]) -> BaseEstimator:
-    model_class = eval(model_config.pop("model_name"))
-    model = model_class(**model_config)
-    return model

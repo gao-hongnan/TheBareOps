@@ -1,9 +1,6 @@
+"""Pipeline without pipeline lol."""
 import logging
-import time
-from pathlib import Path
-from typing import Literal, Optional
 
-import pandas as pd
 from common_utils.cloud.gcp.database.bigquery import BigQuery
 from common_utils.cloud.gcp.storage.gcs import GCS
 from common_utils.core.logger import Logger
@@ -11,7 +8,7 @@ from common_utils.data_validator.core import DataFrameValidator
 from common_utils.versioning.dvc.core import SimpleDVC
 from rich.pretty import pprint
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
 
 from conf.base import Config
 from metadata.core import Metadata
@@ -21,6 +18,7 @@ from pipeline_training.data_loading.load import Load
 from pipeline_training.data_resampling.resampling import Resampler
 from pipeline_training.utils.common import log_data_splits_summary
 from schema.core import RawSchema, TransformedSchema
+from sklearn.linear_model import SGDClassifier
 
 # pylint: disable=no-member
 
@@ -133,7 +131,7 @@ splits = {
 
 total_size = len(X_train) + len(X_val) + len(X_test)
 table = log_data_splits_summary(splits, total_size)
-pprint(table)
+logger.info(f"Data splits summary:\n{table}")
 
 # TODO: Technically, BASELINE MODEL can be rule based or something simple for
 # ml models to beat.
@@ -141,15 +139,32 @@ pprint(table)
 # and check baseline with default parameters or slightly tuned parameters.
 # See my AIAP project for more details. For now I will just define one model.
 
+# model = SGDClassifier(
+#     **{
+#         "loss": "log_loss",
+#         "penalty": "l2",
+#         "alpha": 0.0001,
+#         "max_iter": 100,
+#         "learning_rate": "optimal",
+#         "eta0": 0.1,
+#         "power_t": 0.1,
+#         "warm_start": True,
+#         "random_state": 1992,
+#     }
+# )
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
-from sklearn.metrics import accuracy_score
 
 y_pred = model.predict(X_val)
 accuracy = accuracy_score(y_val, y_pred)
 
 print(f"Accuracy: {accuracy}")
-assert accuracy == 0.7866666666666666
+
+y_pred_holdout = model.predict(X_test)
+
+accuracy = accuracy_score(y_test, y_pred_holdout)
+print(f"Accuracy: {accuracy}")
+# assert accuracy == 0.7866666666666666
 
 
 # NOTE:
