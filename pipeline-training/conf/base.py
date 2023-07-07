@@ -21,7 +21,7 @@ class Config(BaseModel):
     env: Environment = Environment.create_instance()
     extract: Extract = Extract()
     load: Load = Load()
-    preprocess: Cleaner = Cleaner()
+    clean: Cleaner = Cleaner()
     resample: Resample = Resample()
     general: General = General(pipeline_name="pipeline-training")
 

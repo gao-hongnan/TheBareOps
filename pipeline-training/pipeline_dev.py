@@ -18,7 +18,7 @@ from metadata.core import Metadata
 from pipeline_training.data_cleaning.cleaning import Cleaner
 from pipeline_training.data_extraction.extract import Extract
 from pipeline_training.data_loading.load import Load
-from pipeline_training.data_resampling.resampling import Resampler, get_data_splits
+from pipeline_training.data_resampling.resampling import Resampler
 from pipeline_training.utils.common import log_data_splits_summary
 from schema.core import RawSchema, TransformedSchema
 
@@ -89,15 +89,15 @@ validator.validate_schema().validate_data_types().validate_missing()
 # remote_project_name = "imdb"
 # dvc.pull(filename=filename, remote_project_name=remote_project_name)
 
-# NOTE: preprocess.py
+# NOTE: cleaner.py
 dvc = SimpleDVC(
     storage=storage,
     remote_bucket_project_name=cfg.env.gcs_bucket_project_name,
     data_dir=cfg.dirs.data.processed,
     metadata_dir=cfg.dirs.stores.blob.processed,
 )
-preprocess = Cleaner(cfg=cfg, metadata=metadata, logger=logger, dvc=dvc)
-metadata = preprocess.run()
+cleaner = Cleaner(cfg=cfg, metadata=metadata, logger=logger, dvc=dvc)
+metadata = cleaner.run()
 pprint(metadata.processed_df)
 # pprint(metadata.processed_df.dtypes)
 

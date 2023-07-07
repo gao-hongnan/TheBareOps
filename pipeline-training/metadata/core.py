@@ -39,7 +39,7 @@ class Metadata:
     raw_filepath: str = None
     raw_dvc_metadata: Dict[str, Any] = None
 
-    # inside preprocess.py
+    # inside cleaner.py
     processed_df: pd.DataFrame = None
     processed_num_rows: int = None
     processed_num_cols: int = None

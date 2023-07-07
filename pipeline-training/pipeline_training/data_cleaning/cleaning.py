@@ -1,4 +1,4 @@
-"""This preprocess step is mostly cleaning and adding important columns such
+"""This clean/preprocess step is mostly cleaning and adding important columns such
 as targets derived from the features.
 
 For the real preprocessing such as imputing, encoding, and standardizing,
@@ -158,13 +158,13 @@ class Cleaner:
         """
         df = self.metadata.raw_df
         df = self.cast_columns(
-            df, **self.cfg.preprocess.cast_columns.model_dump(mode="python")
+            df, **self.cfg.clean.cast_columns.model_dump(mode="python")
         )
         df = self.feature_engineer(df)
 
         # save processed data to local
         filepath = self.load_to_local(
-            df, **self.cfg.preprocess.load_to_local.model_dump(mode="python")
+            df, **self.cfg.clean.load_to_local.model_dump(mode="python")
         )
         attr_dict = {
             "processed_df": df,
@@ -176,7 +176,7 @@ class Cleaner:
 
         Xy = self.extract_features_and_target(
             df,
-            **self.cfg.preprocess.extract_features_and_target.model_dump(mode="python"),
+            **self.cfg.clean.extract_features_and_target.model_dump(mode="python"),
         )
         attr_dict.update(Xy)
 
