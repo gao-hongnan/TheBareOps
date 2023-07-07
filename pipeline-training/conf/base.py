@@ -2,12 +2,12 @@ from common_utils.core.common import generate_uuid
 from pydantic import BaseModel
 from rich.pretty import pprint
 
+from conf.clean.base import Cleaner
 from conf.directory.base import ROOT_DIR, Directories
 from conf.environment.base import Environment
 from conf.extract.base import Extract
 from conf.general.base import General
 from conf.load.base import Load
-from conf.preprocess.base import Preprocess
 from conf.resample.base import Resample
 
 RUN_ID = generate_uuid()
@@ -21,7 +21,7 @@ class Config(BaseModel):
     env: Environment = Environment.create_instance()
     extract: Extract = Extract()
     load: Load = Load()
-    preprocess: Preprocess = Preprocess()
+    preprocess: Cleaner = Cleaner()
     resample: Resample = Resample()
     general: General = General(pipeline_name="pipeline-training")
 

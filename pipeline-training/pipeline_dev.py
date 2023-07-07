@@ -1,4 +1,5 @@
 import logging
+import time
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -10,16 +11,20 @@ from common_utils.data_validator.core import DataFrameValidator
 from common_utils.versioning.dvc.core import SimpleDVC
 from rich.pretty import pprint
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
 
 from conf.base import Config
 from metadata.core import Metadata
+from pipeline_training.data_cleaning.cleaning import Cleaner
 from pipeline_training.data_extraction.extract import Extract
 from pipeline_training.data_loading.load import Load
-from pipeline_training.data_preprocessing.preprocess import Preprocess
-from pipeline_training.data_resampling.resampling import get_data_splits, Resampler
+from pipeline_training.data_resampling.resampling import Resampler, get_data_splits
+from pipeline_training.utils.common import log_data_splits_summary
 from schema.core import RawSchema, TransformedSchema
 
 # pylint: disable=no-member
+
+# FIXME: Ask how to modify logger to capture the logs from external modules.
 
 cfg = Config()
 
@@ -91,7 +96,7 @@ dvc = SimpleDVC(
     data_dir=cfg.dirs.data.processed,
     metadata_dir=cfg.dirs.stores.blob.processed,
 )
-preprocess = Preprocess(cfg=cfg, metadata=metadata, logger=logger, dvc=dvc)
+preprocess = Cleaner(cfg=cfg, metadata=metadata, logger=logger, dvc=dvc)
 metadata = preprocess.run()
 pprint(metadata.processed_df)
 # pprint(metadata.processed_df.dtypes)
@@ -112,9 +117,23 @@ metadata = resampler.metadata
 #     metadata.y_train,
 #     metadata.y_val,
 # )
+
+
 # NOTE: Subsetting resampler works why? Because of __getitem__ method.
 X_train, y_train = resampler["train"]
 X_val, y_val = resampler["val"]
+X_test, y_test = resampler["test"]
+
+# Assume splits is a dictionary of your data splits
+splits = {
+    "train": X_train,
+    "val": X_val,
+    "test": X_test,
+}
+
+total_size = len(X_train) + len(X_val) + len(X_test)
+table = log_data_splits_summary(splits, total_size)
+pprint(table)
 
 # TODO: Technically, BASELINE MODEL can be rule based or something simple for
 # ml models to beat.

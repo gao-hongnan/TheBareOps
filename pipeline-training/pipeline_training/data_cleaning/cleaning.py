@@ -1,3 +1,9 @@
+"""This preprocess step is mostly cleaning and adding important columns such
+as targets derived from the features.
+
+For the real preprocessing such as imputing, encoding, and standardizing,
+we will do it in the model training step to prevent data leakage."""
+
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -11,9 +17,9 @@ from metadata.core import Metadata
 from pipeline_training.utils.common import get_file_format, get_file_size
 
 
-class Preprocess:
+class Cleaner:
     """
-    Preprocess class for preprocessing the data.
+    Cleaner class for preprocessing the data.
 
     Parameters
     ----------
@@ -36,57 +42,6 @@ class Preprocess:
         self.logger = logger
         self.metadata = metadata
         self.dvc = dvc
-
-    def impute(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Handle missing values in the DataFrame.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            DataFrame to be processed.
-
-        Returns
-        -------
-        df : pd.DataFrame
-            Processed DataFrame with handled missing values.
-        """
-        # implementation here
-        return df
-
-    def standardize_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Standardize numerical features in the DataFrame.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            DataFrame to be processed.
-
-        Returns
-        -------
-        df : pd.DataFrame
-            Processed DataFrame with standardized numerical features.
-        """
-        # implementation here
-        return df
-
-    def encode_categorical_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Encode categorical features in the DataFrame.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            DataFrame to be processed.
-
-        Returns
-        -------
-        df : pd.DataFrame
-            Processed DataFrame with encoded categorical features.
-        """
-        # implementation here
-        return df
 
     def cast_columns(
         self, df: pd.DataFrame, column_types: Dict[str, str]
@@ -202,12 +157,9 @@ class Preprocess:
             preprocessed data.
         """
         df = self.metadata.raw_df
-        df = self.impute(df)
         df = self.cast_columns(
             df, **self.cfg.preprocess.cast_columns.model_dump(mode="python")
         )
-        df = self.standardize_features(df)
-        df = self.encode_categorical_features(df)
         df = self.feature_engineer(df)
 
         # save processed data to local
