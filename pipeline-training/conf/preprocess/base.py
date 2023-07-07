@@ -44,13 +44,13 @@ class CastColumns(BaseModel):
     column_types: Dict[str, str] = Field(
         default={
             "utc_datetime": "datetime64[ns]",
-            "open_time": "datetime64[ns]",
+            "open_time": "int",
             "open": "float",
             "high": "float",
             "low": "float",
             "close": "float",
             "volume": "float",
-            "close_time": "datetime64[ns]",
+            "close_time": "int",
             "quote_asset_volume": "float",
             "number_of_trades": "int",
             "taker_buy_base_asset_volume": "float",

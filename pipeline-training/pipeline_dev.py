@@ -9,13 +9,14 @@ from common_utils.core.logger import Logger
 from common_utils.data_validator.core import DataFrameValidator
 from common_utils.versioning.dvc.core import SimpleDVC
 from rich.pretty import pprint
+from sklearn.ensemble import RandomForestClassifier
 
 from conf.base import Config
 from metadata.core import Metadata
 from pipeline_training.data_extraction.extract import Extract
 from pipeline_training.data_loading.load import Load
 from pipeline_training.data_preprocessing.preprocess import Preprocess
-from pipeline_training.data_resampling.resampling import get_data_splits
+from pipeline_training.data_resampling.resampling import get_data_splits, Resampler
 from schema.core import RawSchema, TransformedSchema
 
 # pylint: disable=no-member
@@ -95,31 +96,42 @@ metadata = preprocess.run()
 pprint(metadata.processed_df)
 # pprint(metadata.processed_df.dtypes)
 
-# TODO: validate again
+# TODO: validate again after preprocessing
 
+# TODO: Make resample a class and log data splits as method.
 # NOTE: resampling.py
 X = metadata.X
 y = metadata.y
 
-metadata = get_data_splits(cfg, metadata, X, y)
-X_train, X_test, y_train, y_test = (
-    metadata.X_train,
-    metadata.X_test,
-    metadata.y_train,
-    metadata.y_test,
-)
+resampler = Resampler(cfg=cfg, metadata=metadata, logger=logger, X=X, y=y)
+metadata = resampler.metadata
 
-from sklearn.ensemble import RandomForestClassifier
+# X_train, X_val, y_train, y_val = (
+#     metadata.X_train,
+#     metadata.X_val,
+#     metadata.y_train,
+#     metadata.y_val,
+# )
+# NOTE: Subsetting resampler works why? Because of __getitem__ method.
+X_train, y_train = resampler["train"]
+X_val, y_val = resampler["val"]
+
+# TODO: Technically, BASELINE MODEL can be rule based or something simple for
+# ml models to beat.
+# In reality, this step can select like a list of [model1, model2, model3]
+# and check baseline with default parameters or slightly tuned parameters.
+# See my AIAP project for more details. For now I will just define one model.
 
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 from sklearn.metrics import accuracy_score
 
-y_pred = model.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred)
+y_pred = model.predict(X_val)
+accuracy = accuracy_score(y_val, y_pred)
 
 print(f"Accuracy: {accuracy}")
-# TODO: Make resample a class and log data splits as method.
+assert accuracy == 0.7866666666666666
+
 
 # NOTE:
 # BASELINE MODEL
