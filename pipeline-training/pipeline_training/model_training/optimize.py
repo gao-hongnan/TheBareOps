@@ -1,19 +1,25 @@
 """NOTE: As mentioned, this does not touch on
 tricks and tips on how to improve the model performance."""
 import copy
-from typing import Any, Dict, Union
+from types import SimpleNamespace
+from typing import Any, Callable, Dict, Optional, Union
 
 import optuna
 from optuna.integration.mlflow import MLflowCallback
 from rich.pretty import pprint
-from types import SimpleNamespace
-from metadata.core import Metadata
 
-from pipeline_training.model_training.train import train_model
+from metadata.core import Metadata
+from pipeline_training.model_training.train import Trainer
 
 
 # create an Optuna objective function for hyperparameter tuning
-def objective(cfg, logger, metadata, model, trial: optuna.trial._trial.Trial):
+def objective(
+    cfg,
+    logger,
+    metadata,
+    preprocessor,
+    trial: optuna.trial._trial.Trial,
+):
     # define hyperparameters to tune
     # the actual hyperparameters depend on your model
     logger.warning("Performing a deepcopy of the config object to avoid mutation.")
@@ -29,14 +35,17 @@ def objective(cfg, logger, metadata, model, trial: optuna.trial._trial.Trial):
 
     # you assign back to cfg.train.model and vectorizer so train_model can use them
     # train and evaluate the model using the current hyperparameters
-    metadata = train_model(
-        cfg=cfg, logger=logger, metadata=metadata, model=model, trial=trial
+    trainer = Trainer(
+        cfg=cfg, logger=logger, metadata=metadata, preprocessor=preprocessor
     )
-    # overall_performance = metadata.model_artifacts["overall_performance"]
-    # trial.set_user_attr("test_accuracy", overall_performance["test_accuracy"])
-    # trial.set_user_attr("test_f1", overall_performance["test_f1"])
-    trial.set_user_attr("val_loss", metadata.model_artifacts["val_loss"])
-    return metadata.model_artifacts["val_loss"]
+
+    metadata = trainer.train_model(trial=trial)
+
+    overall_performance_val = metadata.model_artifacts["overall_performance_val"]
+    trial.set_user_attr("val_accuracy", overall_performance_val["val_accuracy"])
+    trial.set_user_attr("val_f1", overall_performance_val["val_f1"])
+    trial.set_user_attr("val_loss", overall_performance_val["val_loss"])
+    return overall_performance_val["val_accuracy"]
 
 
 def create_pruner(pruner_config: Dict[str, Any]) -> optuna.pruners.BasePruner:
@@ -51,7 +60,7 @@ def create_sampler(sampler_config: Dict[str, Any]) -> optuna.samplers.BaseSample
     return sampler
 
 
-def optimize(cfg, logger, metadata, model) -> Union[Metadata, SimpleNamespace]:
+def optimize(cfg, logger, metadata, preprocessor) -> Union[Metadata, SimpleNamespace]:
     logger.info(
         """Seeing inside objective function as well to ensure the hyperparam grid is seeded.
         See https://optuna.readthedocs.io/en/stable/faq.html for how to seed in Optuna"""
@@ -68,7 +77,11 @@ def optimize(cfg, logger, metadata, model) -> Union[Metadata, SimpleNamespace]:
 
     study.optimize(
         lambda trial: objective(
-            cfg=cfg, logger=logger, metadata=metadata, model=model, trial=trial
+            cfg=cfg,
+            logger=logger,
+            metadata=metadata,
+            trial=trial,
+            preprocessor=preprocessor,
         ),
         n_trials=cfg.train.optimize.n_trials,
         callbacks=[mlflow_callback],

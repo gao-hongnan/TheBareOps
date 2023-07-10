@@ -5,12 +5,12 @@ from rich.pretty import pprint
 from conf.clean.base import Clean
 from conf.directory.base import ROOT_DIR, Directories
 from conf.environment.base import Environment
+from conf.experiment_tracking.base import Experiment
 from conf.extract.base import Extract
 from conf.general.base import General
 from conf.load.base import Load
 from conf.resample.base import Resample
 from conf.train.base import Train
-from conf.experiment_tracking.base import Experiment
 
 RUN_ID = generate_uuid()
 

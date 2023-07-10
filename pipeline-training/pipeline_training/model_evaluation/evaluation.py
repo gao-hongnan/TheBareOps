@@ -1,3 +1,6 @@
+# Evaluate on test data
+# performance = predict_on_holdout_set(model, X_test, y_test)
+
 # TODO: dump confusion matrix and classification report to image/media.
 def predict_on_holdout_set(
     model, X_test: np.ndarray, y_test: np.ndarray

@@ -1,16 +1,16 @@
-from typing import List, Union, Dict, Any
+from typing import Any, Dict, List, Union
 
 from pydantic import BaseModel, Field
 
 
 class Experiment(BaseModel):
     experiment_name: str = "thebareops_mlops_pipeline"
-    tracking_uri: str = "http://127.0.0.1:5000/"
+    tracking_uri: str = None
     start_run: Dict[str, Any] = Field(
         default={
             "run_name": "tuned_thebareops_sgd_5_epochs",
             "nested": True,
-            "description": "Imdb sentiment analysis with sklearn SGDClassifier",
+            "description": "TheBareOps with sklearn SGDClassifier",
             "tags": {"framework": "sklearn", "type": "classification"},
         },
     )

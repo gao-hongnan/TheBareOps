@@ -4,6 +4,7 @@
 # ouputs
 outputs/
 mlruns/
+mlartifacts/
 
 # tmp
 tmp.*

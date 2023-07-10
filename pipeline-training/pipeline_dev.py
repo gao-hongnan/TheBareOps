@@ -8,20 +8,20 @@ from common_utils.data_validator.core import DataFrameValidator
 from common_utils.versioning.dvc.core import SimpleDVC
 from rich.pretty import pprint
 from sklearn.metrics import accuracy_score
-
+import time
 from conf.base import Config
 from metadata.core import Metadata
 from pipeline_training.data_cleaning.clean import Clean
 from pipeline_training.data_extraction.extract import Extract
 from pipeline_training.data_loading.load import Load
 from pipeline_training.data_resampling.resampler import Resampler
+from pipeline_training.model_training.optimize import optimize
 from pipeline_training.model_training.preprocess import Preprocessor
 from pipeline_training.model_training.train import (
+    Trainer,
     create_baseline_model,
     create_model,
-    train_model,
 )
-from pipeline_training.model_training.optimize import optimize
 from pipeline_training.utils.common import log_data_splits_summary
 from schema.core import RawSchema
 
@@ -174,27 +174,38 @@ accuracy = accuracy_score(y_test, y_pred_holdout)
 print(f"Accuracy: {accuracy}")
 
 
-model = create_model(cfg)
+# trainer = Trainer(cfg=cfg, metadata=metadata, logger=logger, preprocessor=preprocessor)
+# metadata = trainer.train_model(trial=None)
 # metadata = train_model(
 #     cfg=cfg, logger=logger, metadata=metadata, model=model, trial=None
 # )
 
 # optimize.py
-metadata, cfg = optimize(cfg=cfg, metadata=metadata, logger=logger, model=model)
-pprint(cfg.train.create_model)
-# pprint(metadata)
-# model.fit(X_train, y_train)
+metadata, cfg = optimize(
+    cfg=cfg, metadata=metadata, logger=logger, preprocessor=preprocessor
+)
 
-# y_pred = model.predict(X_val)
-# accuracy = accuracy_score(y_val, y_pred)
-# print(f"Accuracy: {accuracy}")
-# assert accuracy == 0.7755555555555556
+# train on best hyperparameters
+logger.info(
+    "Training model with best hyperparameters...Updating `X_train` to `X` and `y_train` to `y`"
+)
+# TODO: but i did not for simplicity sake.
+# X = preprocessor.transform(X)
+# metadata.X_train = X
+# metadata.y_train = y.to_numpy()
+
+trainer = Trainer(cfg=cfg, metadata=metadata, logger=logger, preprocessor=preprocessor)
+metadata = trainer.train()
+pprint(metadata)
 
 
-y_pred_holdout = metadata.model_artifacts["model"].predict(X_test)
+best_model = create_model(cfg)
+best_model.fit(X_train, y_train)
+
+y_pred_holdout = best_model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred_holdout)
 print(f"Accuracy: {accuracy}")
-assert accuracy == 0.8266666666666667
+assert accuracy == 0.8155555555555556
 
 
 # NOTE:
