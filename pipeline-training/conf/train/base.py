@@ -1,26 +1,24 @@
-from typing import Dict, List, Literal, Union, Optional
+from typing import List, Union
 
 from pydantic import BaseModel, Field
-from pydantic import BaseModel
-from typing import Any, Dict, List, Union, Optional
-from sklearn.base import BaseEstimator
 
 
-class BaseModelConfig(BaseModel):
-    name: str
-    random_state: Optional[int] = 42
+class CreateBaselineModel(BaseModel):
+    name: str = "sklearn.dummy.DummyClassifier"
+    strategy: str = "prior"
 
 
-class DummyModelConfig(BaseModelConfig):
-    strategy: str
-
-
-class LogisticModelConfig(BaseModelConfig):
-    solver: str
-
-
-class RandomForestModelConfig(BaseModelConfig):
-    n_estimators: Optional[int] = 100
+class CreateModel(BaseModel):
+    name: str = "sklearn.linear_model.SGDClassifier"
+    loss: str = "log_loss"
+    penalty: str = "l2"
+    alpha: float = 0.0001
+    max_iter: int = 100
+    learning_rate: str = "optimal"
+    eta0: float = 0.1
+    power_t: float = 0.1
+    warm_start: bool = True
+    random_state: int = 1992
 
 
 class CreateImputer(BaseModel):
@@ -64,14 +62,8 @@ class Features(BaseModel):
 
 
 class Train(BaseModel):
-    # model_configs: Dict[str, BaseModelConfig] = Field(
-    #     default={
-    #         "DummyClassifier": {
-    #             "model_name": "DummyClassifier",
-    #             "strategy": "most_frequent",
-    #         },
-    #     }
-    # )
+    create_baseline_model: CreateBaselineModel = Field(default=CreateBaselineModel())
+    create_model: CreateModel = Field(default=CreateModel())
 
     create_imputer: CreateImputer = Field(default=CreateImputer())
     create_encoder: CreateEncoder = Field(default=CreateEncoder())

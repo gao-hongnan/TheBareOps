@@ -1,17 +1,11 @@
-# impute
-# standardize_features
-# encode_categorical_features
-from sklearn.preprocessing import StandardScaler
-
 from common_utils.core.logger import Logger
-from conf.base import Config
-from metadata.core import Metadata
-
 from sklearn import compose, impute, pipeline, preprocessing
 from sklearn.impute._base import _BaseImputer
-from sklearn.impute import KNNImputer
-
+from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing._encoders import _BaseEncoder
+
+from conf.base import Config
+from metadata.core import Metadata
 
 
 class Preprocessor:
@@ -75,4 +69,6 @@ class Preprocessor:
                 ("cat", categorical_transformer, categorical_features),
             ]
         )
+
+        self.metadata.set_attrs({"preprocessor": preprocessor})
         return preprocessor

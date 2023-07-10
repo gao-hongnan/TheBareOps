@@ -3,6 +3,7 @@ from typing import Any, Dict, Union
 
 import numpy as np
 import pandas as pd
+from sklearn import pipeline
 
 # TODO: Compose Metadata in a similar way as Config instead of scattering.
 # TODO: Add more metadata attributes, for example the GCS path that stores
@@ -57,7 +58,11 @@ class Metadata:
     y_test: pd.DataFrame = None
     y_val: pd.DataFrame = None
 
+    # model_training/preprocess.py
+    preprocessor: pipeline.Pipeline = None
+
     # inside train.py
+
     model_artifacts: Dict[str, Any] = None
 
     # inside evaluate.py

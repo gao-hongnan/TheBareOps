@@ -7,7 +7,6 @@ from common_utils.core.logger import Logger
 from common_utils.data_validator.core import DataFrameValidator
 from common_utils.versioning.dvc.core import SimpleDVC
 from rich.pretty import pprint
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 
 from conf.base import Config
@@ -16,10 +15,10 @@ from pipeline_training.data_cleaning.cleaner import Cleaner
 from pipeline_training.data_extraction.extract import Extract
 from pipeline_training.data_loading.load import Load
 from pipeline_training.data_resampling.resampler import Resampler
+from pipeline_training.model_training.preprocess import Preprocessor
+from pipeline_training.model_training.train import create_baseline_model, create_model
 from pipeline_training.utils.common import log_data_splits_summary
 from schema.core import RawSchema
-from sklearn.linear_model import SGDClassifier
-from pipeline_training.model_training.preprocess import Preprocessor
 
 # pylint: disable=no-member
 
@@ -147,7 +146,7 @@ X_test = preprocessor.transform(X_test)
 # here x_train, x_val, x_test are numpy arrays cause imputer returns numpy arrays
 # and therefore it.
 metadata.set_attrs({"X_train": X_train, "X_val": X_val, "X_test": X_test})
-pprint(metadata.X_train)
+
 # TODO: Technically, BASELINE MODEL can be rule based or something simple for
 # ml models to beat. Check https://github.com/gao-hongnan/aiap-batch10-coronary-artery-disease/tree/master/notebooks
 # for more details.
@@ -157,32 +156,31 @@ pprint(metadata.X_train)
 # and check baseline with default parameters or slightly tuned parameters.
 # See my AIAP project for more details. For now I will just define one model.
 
-model = SGDClassifier(
-    **{
-        "loss": "log_loss",
-        "penalty": "l2",
-        "alpha": 0.0001,
-        "max_iter": 100,
-        "learning_rate": "optimal",
-        "eta0": 0.1,
-        "power_t": 0.1,
-        "warm_start": True,
-        "random_state": 1992,
-    }
-)
+
+baseline = create_baseline_model(cfg)
+baseline.fit(X_train, y_train)
+y_pred = baseline.predict(X_val)
+accuracy = accuracy_score(y_val, y_pred)
+print(f"Accuracy: {accuracy}")
+
+y_pred_holdout = baseline.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred_holdout)
+print(f"Accuracy: {accuracy}")
+
+
+model = create_model(cfg)
 # model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
 y_pred = model.predict(X_val)
 accuracy = accuracy_score(y_val, y_pred)
-
 print(f"Accuracy: {accuracy}")
+assert accuracy == 0.7755555555555556
 
 y_pred_holdout = model.predict(X_test)
-
 accuracy = accuracy_score(y_test, y_pred_holdout)
 print(f"Accuracy: {accuracy}")
-# assert accuracy == 0.7866666666666666
+assert accuracy == 0.8022222222222222
 
 
 # NOTE:
