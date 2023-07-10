@@ -9,6 +9,7 @@ from conf.extract.base import Extract
 from conf.general.base import General
 from conf.load.base import Load
 from conf.resample.base import Resample
+from conf.train.base import Train
 
 RUN_ID = generate_uuid()
 
@@ -23,6 +24,7 @@ class Config(BaseModel):
     load: Load = Load()
     clean: Cleaner = Cleaner()
     resample: Resample = Resample()
+    train: Train = Train()
     general: General = General(pipeline_name="pipeline-training")
 
 

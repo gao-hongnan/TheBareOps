@@ -67,6 +67,6 @@ class Cleaner(BaseModel):
     )
     cast_columns: CastColumns = Field(default=CastColumns(), description="Cast Columns")
     extract_features_and_target: ExtractFeaturesAndTarget = Field(
-        default=ExtractFeaturesAndTarget(as_dataframe=False),
+        default=ExtractFeaturesAndTarget(as_dataframe=True),
         description="Extract Features and Target",
     )
