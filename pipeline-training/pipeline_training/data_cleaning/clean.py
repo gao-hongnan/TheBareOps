@@ -17,7 +17,7 @@ from metadata.core import Metadata
 from pipeline_training.utils.common import get_file_format, get_file_size
 
 
-class Cleaner:
+class Clean:
     """
     Cleaner class for preprocessing the data.
 

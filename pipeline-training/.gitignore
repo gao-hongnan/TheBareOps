@@ -3,6 +3,7 @@
 
 # ouputs
 outputs/
+mlruns/
 
 # tmp
 tmp.*

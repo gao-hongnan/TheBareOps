@@ -11,12 +11,17 @@ from sklearn.metrics import accuracy_score
 
 from conf.base import Config
 from metadata.core import Metadata
-from pipeline_training.data_cleaning.cleaner import Cleaner
+from pipeline_training.data_cleaning.clean import Clean
 from pipeline_training.data_extraction.extract import Extract
 from pipeline_training.data_loading.load import Load
 from pipeline_training.data_resampling.resampler import Resampler
 from pipeline_training.model_training.preprocess import Preprocessor
-from pipeline_training.model_training.train import create_baseline_model, create_model
+from pipeline_training.model_training.train import (
+    create_baseline_model,
+    create_model,
+    train_model,
+)
+from pipeline_training.model_training.optimize import optimize
 from pipeline_training.utils.common import log_data_splits_summary
 from schema.core import RawSchema
 
@@ -87,15 +92,15 @@ validator.validate_schema().validate_data_types().validate_missing()
 # remote_project_name = "imdb"
 # dvc.pull(filename=filename, remote_project_name=remote_project_name)
 
-# NOTE: cleaner.py
+# NOTE: clean.py
 dvc = SimpleDVC(
     storage=storage,
     remote_bucket_project_name=cfg.env.gcs_bucket_project_name,
     data_dir=cfg.dirs.data.processed,
     metadata_dir=cfg.dirs.stores.blob.processed,
 )
-cleaner = Cleaner(cfg=cfg, metadata=metadata, logger=logger, dvc=dvc)
-metadata = cleaner.run()
+clean = Clean(cfg=cfg, metadata=metadata, logger=logger, dvc=dvc)
+metadata = clean.run()
 pprint(metadata.processed_df)
 # pprint(metadata.processed_df.dtypes)
 
@@ -159,6 +164,7 @@ metadata.set_attrs({"X_train": X_train, "X_val": X_val, "X_test": X_test})
 
 baseline = create_baseline_model(cfg)
 baseline.fit(X_train, y_train)
+
 y_pred = baseline.predict(X_val)
 accuracy = accuracy_score(y_val, y_pred)
 print(f"Accuracy: {accuracy}")
@@ -169,18 +175,26 @@ print(f"Accuracy: {accuracy}")
 
 
 model = create_model(cfg)
-# model = RandomForestClassifier(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
+# metadata = train_model(
+#     cfg=cfg, logger=logger, metadata=metadata, model=model, trial=None
+# )
 
-y_pred = model.predict(X_val)
-accuracy = accuracy_score(y_val, y_pred)
-print(f"Accuracy: {accuracy}")
-assert accuracy == 0.7755555555555556
+# optimize.py
+metadata, cfg = optimize(cfg=cfg, metadata=metadata, logger=logger, model=model)
+pprint(cfg.train.create_model)
+# pprint(metadata)
+# model.fit(X_train, y_train)
 
-y_pred_holdout = model.predict(X_test)
+# y_pred = model.predict(X_val)
+# accuracy = accuracy_score(y_val, y_pred)
+# print(f"Accuracy: {accuracy}")
+# assert accuracy == 0.7755555555555556
+
+
+y_pred_holdout = metadata.model_artifacts["model"].predict(X_test)
 accuracy = accuracy_score(y_test, y_pred_holdout)
 print(f"Accuracy: {accuracy}")
-assert accuracy == 0.8022222222222222
+assert accuracy == 0.8266666666666667
 
 
 # NOTE:

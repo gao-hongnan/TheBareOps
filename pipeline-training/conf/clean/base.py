@@ -61,7 +61,7 @@ class CastColumns(BaseModel):
     )
 
 
-class Cleaner(BaseModel):
+class Clean(BaseModel):
     load_to_local: LoadToLocal = Field(
         default=LoadToLocal(), description="Load Processed Data to Local Machine."
     )

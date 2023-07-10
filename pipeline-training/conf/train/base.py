@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Dict, Any
 
 from pydantic import BaseModel, Field
 
@@ -13,7 +13,7 @@ class CreateModel(BaseModel):
     loss: str = "log_loss"
     penalty: str = "l2"
     alpha: float = 0.0001
-    max_iter: int = 100
+    max_iter: int = 10
     learning_rate: str = "optimal"
     eta0: float = 0.1
     power_t: float = 0.1
@@ -61,6 +61,29 @@ class Features(BaseModel):
     )
 
 
+class Optimize(BaseModel):
+    hyperparams_grid: Dict[str, Any] = Field(
+        default={
+            "model__alpha": (0.0001, 0.0002),
+            "model__power_t": (0.1, 0.5),
+        }
+    )
+    create_study: Dict[str, Any] = {
+        "study_name": "imdb_sgd_study",
+        "direction": "minimize",
+    }
+    sampler: Dict[str, Any] = {
+        "sampler_name": "optuna.samplers.TPESampler",
+        "seed": 1992,
+    }
+    pruner: Dict[str, Any] = {
+        "pruner_name": "optuna.pruners.MedianPruner",
+        "n_startup_trials": 5,
+        "n_warmup_steps": 5,
+    }
+    n_trials: int = 3
+
+
 class Train(BaseModel):
     create_baseline_model: CreateBaselineModel = Field(default=CreateBaselineModel())
     create_model: CreateModel = Field(default=CreateModel())
@@ -69,3 +92,8 @@ class Train(BaseModel):
     create_encoder: CreateEncoder = Field(default=CreateEncoder())
     create_standard_scaler: CreateStandardScaler = Field(default=CreateStandardScaler())
     features: Features = Field(default=Features())
+
+    num_epochs: int = Field(default=5)
+    log_every_n_epoch: int = Field(default=1)
+
+    optimize: Optimize = Field(default=Optimize())
