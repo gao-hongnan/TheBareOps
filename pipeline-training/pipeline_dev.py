@@ -12,12 +12,12 @@ from sklearn.metrics import accuracy_score
 
 from conf.base import Config
 from metadata.core import Metadata
-from pipeline_training.data_cleaning.cleaning import Cleaner
+from pipeline_training.data_cleaning.cleaner import Cleaner
 from pipeline_training.data_extraction.extract import Extract
 from pipeline_training.data_loading.load import Load
-from pipeline_training.data_resampling.resampling import Resampler
+from pipeline_training.data_resampling.resampler import Resampler
 from pipeline_training.utils.common import log_data_splits_summary
-from schema.core import RawSchema, TransformedSchema
+from schema.core import RawSchema
 from sklearn.linear_model import SGDClassifier
 
 # pylint: disable=no-member
@@ -103,6 +103,8 @@ pprint(metadata.processed_df)
 
 # TODO: Make resample a class and log data splits as method.
 # NOTE: resampling.py
+# TODO: Consider remove X and y from init of Resampler since it can be obtained
+# from metadata.
 X = metadata.X
 y = metadata.y
 

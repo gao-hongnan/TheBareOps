@@ -49,7 +49,7 @@ class Metadata:
     X: Union[pd.DataFrame, np.ndarray] = None
     y: Union[pd.DataFrame, np.ndarray] = None
 
-    # inside resampling.py
+    # inside resampler.py
     X_train: pd.DataFrame = None
     X_test: pd.DataFrame = None
     X_val: pd.DataFrame = None
