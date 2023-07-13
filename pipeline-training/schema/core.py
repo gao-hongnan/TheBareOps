@@ -8,6 +8,8 @@ from schema.base import BaseSchema
 
 
 class RawSchema(BaseSchema):
+    """The type hints are python native types."""
+
     utc_datetime: datetime
     open_time: int
     open: str
@@ -24,23 +26,24 @@ class RawSchema(BaseSchema):
     updated_at: datetime
 
 
-# Then define TransformedSchema with its unique fields
-class TransformedSchema(BaseSchema):
+class CleanedSchema(BaseSchema):
+    """The type hints are python native types."""
+
     utc_datetime: datetime
-    open_time: datetime
+    open_time: int
     open: float
     high: float
     low: float
     close: float
     volume: float
-    close_time: datetime
+    close_time: int
     quote_asset_volume: float
     number_of_trades: int
     taker_buy_base_asset_volume: float
     taker_buy_quote_asset_volume: float
     ignore: str
     updated_at: datetime
-    utc_singapore_datetime: datetime
+    price_increase: int
 
 
 # TODO: Consider adding schema under a pydantic model

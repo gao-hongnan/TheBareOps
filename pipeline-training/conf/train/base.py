@@ -38,7 +38,7 @@ class CreateStandardScaler(BaseModel):
     with_std: bool = True
 
 
-class Features(BaseModel):
+class FeaturesAndTargets(BaseModel):
     continuous_features: List[str] = Field(
         default=[
             "open",
@@ -91,7 +91,7 @@ class Train(BaseModel):
     create_imputer: CreateImputer = Field(default=CreateImputer())
     create_encoder: CreateEncoder = Field(default=CreateEncoder())
     create_standard_scaler: CreateStandardScaler = Field(default=CreateStandardScaler())
-    features: Features = Field(default=Features())
+    features_and_targets: FeaturesAndTargets = Field(default=FeaturesAndTargets())
 
     num_epochs: int = Field(default=5)
     log_every_n_epoch: int = Field(default=1)

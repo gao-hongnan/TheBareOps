@@ -29,18 +29,10 @@ from pipeline_training.model_training.preprocess import Preprocessor
 warnings.filterwarnings("ignore")
 
 
-def create_baseline_model(cfg: Config) -> BaseEstimator:
-    model_args = cfg.train.create_baseline_model.model_dump(mode="python")
-    model_name = model_args.pop("name")
-    module_name, class_name = model_name.rsplit(".", 1)
-    module = import_module(module_name)
-    model_class = getattr(module, class_name)
-    model = model_class(**model_args)
-    return model
-
-
-def create_model(cfg: Config) -> BaseEstimator:
-    model_args = cfg.train.create_model.model_dump(mode="python")
+def create_model_from_config(
+    model_config: Union[CreateModel, CreateBaselineModel]
+) -> BaseEstimator:
+    model_args = model_config.model_dump(mode="python")
     model_name = model_args.pop("name")
     module_name, class_name = model_name.rsplit(".", 1)
     module = import_module(module_name)
@@ -120,7 +112,8 @@ def log_all_metrics_to_mlflow(metrics: Dict[str, Any]) -> None:
         mlflow.log_metric(key, value)
 
 
-def dump_cfg_and_metadata(cfg, metadata):
+def dump_cfg_and_metadata(cfg: Config, metadata: Metadata) -> None:
+    """Dump cfg and metadata to artifacts."""
     with open(f"{cfg.dirs.stores.artifacts}/cfg.pkl", "wb") as file:
         pickle.dump(cfg, file)
 
@@ -135,6 +128,8 @@ def get_experiment_id_via_experiment_name(experiment_name: str) -> int:
     return experiment_id
 
 
+# NOTE: the training loop here is moot since there is `max_iters`, but just
+# want to test the code in MLFlow.
 class Trainer:
     def __init__(
         self,
@@ -170,7 +165,8 @@ class Trainer:
         trial: Optional[optuna.trial._trial.Trial] = None,
     ) -> Dict[str, Any]:
         """Train model."""
-        seed_all(self.cfg.general.seed, seed_torch=False)
+        seed = seed_all(self.cfg.general.seed, seed_torch=False)
+        self.logger.info(f"Using seed {seed}")
 
         self.logger.info("Training model...")
         X_train, y_train = self.metadata.X_train, self.metadata.y_train

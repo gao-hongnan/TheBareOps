@@ -9,26 +9,23 @@ from common_utils.data_validator.core import DataFrameValidator
 from common_utils.versioning.dvc.core import SimpleDVC
 from rich.pretty import pprint
 from sklearn.metrics import accuracy_score
-
+from sklearn.preprocessing import LabelEncoder
 from conf.base import Config
 from metadata.core import Metadata
 from pipeline_training.data_cleaning.clean import Clean
 from pipeline_training.data_extraction.extract import Extract
 from pipeline_training.data_loading.load import Load
-from pipeline_training.data_resampling.resampler import Resampler
+from pipeline_training.data_resampling.resample import Resampler
 from pipeline_training.model_training.optimize import optimize
 from pipeline_training.model_training.preprocess import Preprocessor
-from pipeline_training.model_training.train import (
-    Trainer,
-    create_baseline_model,
-    create_model,
-)
+import numpy as np
+from pipeline_training.model_training.train import Trainer, create_model_from_config
 from pipeline_training.utils.common import (
     compare_test_case,
     compare_test_cases,
     log_data_splits_summary,
 )
-from schema.core import RawSchema
+from schema.core import RawSchema, CleanedSchema
 
 # pylint: disable=no-member
 
@@ -114,7 +111,6 @@ compare_test_cases(
     logger=logger,
 )
 
-
 # reinitialize to pull
 # cfg = initialize_project(ROOT_DIR)
 # gcs = GCS(
@@ -144,7 +140,7 @@ compare_test_cases(
         metadata.feature_columns,
         metadata.target_columns,
         metadata.raw_df,
-        metadata.processed_df.dtypes.to_dict(),
+        # metadata.processed_df.dtypes.to_dict(),
     ],
     expected_list=[
         "processed_binance_btcusdt_spot.csv",
@@ -161,63 +157,69 @@ compare_test_cases(
         ],
         "price_increase",
         None,
-        {
-            "utc_datetime": "datetime64[ns]",
-            "open_time": "int",
-            "open": "float",
-            "high": "float",
-            "low": "float",
-            "close": "float",
-            "volume": "float",
-            "close_time": "int",
-            "quote_asset_volume": "float",
-            "number_of_trades": "int",
-            "taker_buy_base_asset_volume": "float",
-            "taker_buy_quote_asset_volume": "float",
-            "ignore": "str",
-            "updated_at": "datetime64[ns]",
-        },
     ],
     description_list=[
         "processed_dvc filename",
         "processed_dvc md5",
         "processed_dvc remote_dvc_dir_name",
+        "Number of columns in cleaned dataframe",
         "feature_columns",
         "target_columns",
         "Check if raw_df is released",
-        "Check if processed_df dtypes are correct",
+        # "Check if processed_df dtypes are correct",
     ],
     logger=logger,
 )
 
+# NOTE: ??? validate_raw, so if here fails, maybe we should not move on to load.
+expected_cleaned_schema = CleanedSchema.to_pd_dtypes()
 
-# pprint(metadata.processed_df.dtypes)
-time.sleep(10000)
+# NOTE: Checking processed df is sufficient because X and y are derived from
+# it, so if it is correct, then X and y are correct.
+validator = DataFrameValidator(df=metadata.processed_df, schema=expected_cleaned_schema)
+validator.validate_schema().validate_data_types().validate_missing()
 
-# TODO: validate again after preprocessing
-
-# TODO: Make resample a class and log data splits as method.
 # NOTE: resampling.py
 # TODO: Consider remove X and y from init of Resampler since it can be obtained
 # from metadata.
-X = metadata.X
-y = metadata.y
-
+X, y = metadata.X, metadata.y
 resampler = Resampler(cfg=cfg, metadata=metadata, logger=logger, X=X, y=y)
-metadata = resampler.metadata
-
-# X_train, X_val, y_train, y_val = (
-#     metadata.X_train,
-#     metadata.X_val,
-#     metadata.y_train,
-#     metadata.y_val,
-# )
-
 
 # NOTE: Subsetting resampler works why? Because of __getitem__ method.
 X_train, y_train = resampler["train"]
 X_val, y_val = resampler["val"]
 X_test, y_test = resampler["test"]
+
+# NOTE: resampler.metadata is updated after resampling.
+metadata = resampler.metadata
+compare_test_cases(
+    actual_list=[
+        metadata.X_train,
+        metadata.X_val,
+        metadata.X_test,
+        metadata.y_train,
+        metadata.y_val,
+        metadata.y_test,
+    ],
+    expected_list=[
+        X_train,
+        X_val,
+        X_test,
+        y_train,
+        y_val,
+        y_test,
+    ],
+    description_list=[
+        "X_train",
+        "X_val",
+        "X_test",
+        "y_train",
+        "y_val",
+        "y_test",
+    ],
+    logger=logger,
+)
+# TODO: Inject resample to train or pipeline?
 
 # Assume splits is a dictionary of your data splits
 splits = {
@@ -230,6 +232,7 @@ total_size = len(X_train) + len(X_val) + len(X_test)
 table = log_data_splits_summary(splits, total_size)
 logger.info(f"Data splits summary:\n{table}")
 
+
 # NOTE: model_training/preprocess.py
 preprocessor = Preprocessor(
     cfg=cfg, metadata=metadata, logger=logger
@@ -238,12 +241,35 @@ X_train = preprocessor.fit_transform(X_train)
 X_val = preprocessor.transform(X_val)
 X_test = preprocessor.transform(X_test)
 
-# here x_train, x_val, x_test are numpy arrays cause imputer returns numpy arrays
-# and therefore it.
-metadata.set_attrs({"X_train": X_train, "X_val": X_val, "X_test": X_test})
+label_encoder = LabelEncoder()
+y_train = label_encoder.fit_transform(y_train)
+y_val = label_encoder.transform(y_val)
+y_test = label_encoder.transform(y_test)
+
+# NOTE: overwriting X_train, X_val, X_test, y_train, y_val, y_test
+metadata.set_attrs(
+    {
+        "X_train": X_train,
+        "X_val": X_val,
+        "X_test": X_test,
+        "y_train": y_train,
+        "y_val": y_val,
+        "y_test": y_test,
+        "classes": label_encoder.classes_,
+        "num_classes": len(label_encoder.classes_),
+    }
+)
+compare_test_cases(
+    actual_list=[metadata.classes, metadata.num_classes],
+    expected_list=[np.array([0, 1]), 2],
+    description_list=["num_classes", "classes"],
+    logger=logger,
+)
+
 
 # TODO: Technically, BASELINE MODEL can be rule based or something simple for
-# ml models to beat. Check https://github.com/gao-hongnan/aiap-batch10-coronary-artery-disease/tree/master/notebooks
+# ml models to beat.
+# Check https://github.com/gao-hongnan/aiap-batch10-coronary-artery-disease/tree/master/notebooks
 # for more details.
 # So the idea is before the pipeline run in production
 
@@ -252,17 +278,17 @@ metadata.set_attrs({"X_train": X_train, "X_val": X_val, "X_test": X_test})
 # See my AIAP project for more details. For now I will just define one model.
 
 
-baseline = create_baseline_model(cfg)
-baseline.fit(X_train, y_train)
+# baseline = create_model_from_config(cfg.train.create_baseline_model)
+# baseline.fit(X_train, y_train)
 
-y_pred = baseline.predict(X_val)
-accuracy = accuracy_score(y_val, y_pred)
-print(f"Accuracy: {accuracy}")
+# y_pred = baseline.predict(X_val)
+# accuracy = accuracy_score(y_val, y_pred)
+# print(f"Accuracy: {accuracy}")
 
-y_pred_holdout = baseline.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred_holdout)
-print(f"Accuracy: {accuracy}")
-
+# y_pred_holdout = baseline.predict(X_test)
+# accuracy = accuracy_score(y_test, y_pred_holdout)
+# print(f"Accuracy: {accuracy}")
+# time.sleep(100)
 
 # trainer = Trainer(cfg=cfg, metadata=metadata, logger=logger, preprocessor=preprocessor)
 # metadata = trainer.train_model(trial=None)
@@ -270,7 +296,7 @@ print(f"Accuracy: {accuracy}")
 #     cfg=cfg, logger=logger, metadata=metadata, model=model, trial=None
 # )
 
-# optimize.py
+# NOTE: optimize.py
 metadata, cfg = optimize(
     cfg=cfg, metadata=metadata, logger=logger, preprocessor=preprocessor
 )
@@ -286,10 +312,45 @@ logger.info(
 
 trainer = Trainer(cfg=cfg, metadata=metadata, logger=logger, preprocessor=preprocessor)
 metadata = trainer.train()
+
+compare_test_cases(
+    actual_list=[metadata.best_params, metadata.model_artifacts["model_config"]],
+    expected_list=[
+        {
+            "model__alpha": 0.00018152669990587287,
+            "model__power_t": 0.2685947407265318,
+            "best_trial": 0,
+        },
+        {
+            "alpha": 0.00018152669990587287,
+            "average": False,
+            "class_weight": None,
+            "early_stopping": False,
+            "epsilon": 0.1,
+            "eta0": 0.1,
+            "fit_intercept": True,
+            "l1_ratio": 0.15,
+            "learning_rate": "optimal",
+            "loss": "log_loss",
+            "max_iter": 10,
+            "n_iter_no_change": 5,
+            "n_jobs": None,
+            "penalty": "l2",
+            "power_t": 0.2685947407265318,
+            "random_state": 1992,
+            "shuffle": True,
+            "tol": 0.001,
+            "validation_fraction": 0.1,
+            "verbose": 0,
+            "warm_start": True,
+        },
+    ],
+    description_list=["best_params"],
+    logger=logger,
+)
 pprint(metadata)
 
-
-best_model = create_model(cfg)
+best_model = create_model_from_config(cfg.train.create_model)
 best_model.fit(X_train, y_train)
 
 y_pred_holdout = best_model.predict(X_test)

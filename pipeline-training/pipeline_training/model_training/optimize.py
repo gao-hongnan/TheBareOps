@@ -2,7 +2,7 @@
 tricks and tips on how to improve the model performance."""
 import copy
 from types import SimpleNamespace
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Dict, Union
 
 import optuna
 from optuna.integration.mlflow import MLflowCallback
@@ -10,13 +10,15 @@ from rich.pretty import pprint
 
 from metadata.core import Metadata
 from pipeline_training.model_training.train import Trainer
+from conf.base import Config
+from common_utils.core.logger import Logger
 
 
 # create an Optuna objective function for hyperparameter tuning
 def objective(
-    cfg,
-    logger,
-    metadata,
+    cfg: Config,
+    logger: Logger,
+    metadata: Metadata,
     preprocessor,
     trial: optuna.trial._trial.Trial,
 ):
@@ -89,7 +91,7 @@ def optimize(cfg, logger, metadata, preprocessor) -> Union[Metadata, SimpleNames
 
     # print the best hyperparameters
     trials_df = study.trials_dataframe()
-    pprint(trials_df)
+
     trials_df = trials_df.sort_values(by=["user_attrs_val_loss"], ascending=False)
 
     metadata.best_params = {**study.best_trial.params}

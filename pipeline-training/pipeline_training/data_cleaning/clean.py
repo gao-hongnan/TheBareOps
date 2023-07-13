@@ -110,14 +110,23 @@ class Clean:
         Parameters
         ----------
         df : pd.DataFrame
-            DataFrame containing the features and target.
+            Dataframe with features and target.
+
+        feature_columns : List[str]
+            List of feature column names.
+
+        target_columns : Union[str, List[str]]
+            Name(s) of the target column(s).
+
+        as_dataframe : bool, default=True
+            If False, return as numpy array.
 
         Returns
         -------
-        X : pd.DataFrame
-            DataFrame containing the features.
-        y : pd.DataFrame
-            DataFrame containing the target.
+        attr_dict : Dict[str, Union[pd.DataFrame, np.ndarray]]
+            Dictionary containing features (X), target (y), feature
+            column names, target column names, and the number of
+            cleaned numeric columns.
         """
         X = df[feature_columns]
         y = df[target_columns]
@@ -125,11 +134,13 @@ class Clean:
         if not as_dataframe:
             X = X.values
             y = y.values
+
         attr_dict = {
             "X": X,
             "y": y,
             "feature_columns": feature_columns,
             "target_columns": target_columns,
+            "cleaned_num_cols": X.shape[1],
         }
 
         return attr_dict
@@ -180,11 +191,11 @@ class Clean:
             "processed_file_format": get_file_format(filepath=filepath),
         }
 
-        Xy = self.extract_features_and_target(
+        features_and_targets_info = self.extract_features_and_target(
             df,
             **self.cfg.clean.extract_features_and_target.model_dump(mode="python"),
         )
-        attr_dict.update(Xy)
+        attr_dict.update(features_and_targets_info)
 
         if self.dvc is not None:
             track_with_dvc_metadata = self.track_with_dvc(Path(filepath))

@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Union, List
 import pandas as pd
 from prettytable import PrettyTable
 from common_utils.core.logger import Logger
+import numpy as np
 
 
 def compare_test_case(
@@ -13,7 +14,13 @@ def compare_test_case(
     logger: Optional[Logger] = None,
 ) -> None:
     try:
-        assert actual == expected
+        if isinstance(actual, pd.DataFrame) or isinstance(actual, pd.Series):
+            assert actual.equals(expected)
+        elif isinstance(actual, np.ndarray):
+            np.testing.assert_array_equal(actual, expected)
+        else:
+            assert actual == expected
+
         message = f"[green]Test passed:[/green] {description}"
         # If a logger is provided, log the message
         if logger is not None:

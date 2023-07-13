@@ -44,8 +44,9 @@ class Metadata:
     y: Union[pd.DataFrame, np.ndarray] = None
     feature_columns: List[str] = None
     target_columns: Union[str, List[str]] = None
+    cleaned_num_cols: int = None
 
-    # inside resampler.py
+    # inside resample.py
     X_train: pd.DataFrame = None
     X_test: pd.DataFrame = None
     X_val: pd.DataFrame = None
@@ -54,7 +55,17 @@ class Metadata:
     y_val: pd.DataFrame = None
 
     # model_training/preprocess.py
+    numeric_features: List[str] = None
+    categorical_features: List[str] = None
     preprocessor: pipeline.Pipeline = None
+    X_train: np.ndarray = None
+    X_val: np.ndarray = None
+    X_test: np.ndarray = None
+    y_train: np.ndarray = None
+    y_val: np.ndarray = None
+    y_test: np.ndarray = None
+    num_classes: int = None
+    classes: List[int] = None
 
     # inside train.py
 

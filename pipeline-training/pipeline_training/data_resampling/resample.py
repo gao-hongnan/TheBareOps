@@ -28,11 +28,6 @@ from common_utils.core.logger import Logger
 from conf.base import Config
 from metadata.core import Metadata
 
-# TODO: Consider adding a class and do generator style.
-
-
-# TODO: this should be abstractmethod since some users need to use their own
-# resampling strategy like StratifiedGroupKFold etc.
 
 # NOTE: This is not similar to PyTorch Dataset or DataLoader.
 # It is merely using getitem to get "splits" of data.
@@ -49,17 +44,22 @@ class Resampler:
         cfg: Config,
         metadata: Metadata,
         logger: Logger,
-        X: np.ndarray,
-        y: np.ndarray,
+        X: Optional[np.ndarray] = None,
+        y: Optional[np.ndarray] = None,
     ) -> None:
         """
         Initialize Resampler with configuration, metadata, features, and targets.
 
-        Args:
-            cfg (Config): Configuration object.
-            metadata (Metadata): Metadata object.
-            X (np.ndarray): Features.
-            y (np.ndarray): Targets.
+        Parameters
+        ----------
+        cfg : Config
+            Configuration object.
+        metadata : Metadata
+            Metadata object.
+        X : np.ndarray, optional
+            Features.
+        y : np.ndarray, optional
+            Targets.
         """
         self.cfg: Config = cfg
         self.metadata: Metadata = metadata
@@ -68,10 +68,11 @@ class Resampler:
         self.strategy_func = getattr(
             sklearn.model_selection, self.cfg.resample.strategy_name
         )
-        self.X: np.ndarray = X
-        self.y: np.ndarray = y
-        self.prepare_data()
-        self.logger.info("Data prepared in constructor.")
+        self.X: Optional[np.ndarray] = X
+        self.y: Optional[np.ndarray] = y
+        if X is not None and y is not None:
+            self.logger.info("Data provided in constructor.")
+            self.prepare_data(X, y)
 
     def __getitem__(self, key: str) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -84,7 +85,8 @@ class Resampler:
 
         Returns
         -------
-        Tuple[np.ndarray, np.ndarray]: Features and targets for the specified subset.
+        Tuple[np.ndarray, np.ndarray]
+            Features and targets for the specified subset.
         """
         return self.dataset[key]
 
@@ -92,17 +94,35 @@ class Resampler:
         """
         Get the number of subsets.
 
-        Returns:
-            int: Number of subsets.
+        Returns
+        -------
+        int
+            Number of subsets.
         """
         return len(self.dataset)
 
-    def prepare_data(self) -> None:
+    # TODO: this should be abstractmethod since some users need to use their own
+    # resampling strategy like StratifiedGroupKFold etc.
+    def prepare_data(
+        self, X: Optional[np.ndarray] = None, y: Optional[np.ndarray] = None
+    ) -> None:
         """
         Prepare data by splitting it into training, validation, and test sets.
-        This is a naive train-val-test split, for sophisticated resampling
-        need to override this method.
+        Naive train-val-test split, for sophisticated resampling override this method.
+
+        Parameters
+        ----------
+        X : np.ndarray, optional
+            New features to replace the instance variable, if any.
+        y : np.ndarray, optional
+            New targets to replace the instance variable, if any.
         """
+        X = X if X is not None else self.X
+        y = y if y is not None else self.y
+
+        if X is None:
+            raise ValueError("X is None.")
+
         X_train, X_, y_train, y_ = self.strategy_func(
             self.X,
             self.y,
@@ -136,12 +156,17 @@ class Resampler:
         """
         Generate batches of data for a specified subset.
 
-        Args:
-            key (str): Subset key. Expected values are 'train', 'val', or 'test'.
-            batch_size (Optional[int]): Size of batches. If None, entire dataset is used.
+        Parameters
+        ----------
+        key : str
+            Subset key. Expected values are 'train', 'val', or 'test'.
+        batch_size : Optional[int]
+            Size of batches. If None, entire dataset is used.
 
-        Yields:
-            Tuple[np.ndarray, np.ndarray]: A batch of features and targets.
+        Yields
+        ------
+        Tuple[np.ndarray, np.ndarray]
+            A batch of features and targets.
         """
         X, y = self.dataset[key]
         n_samples = X.shape[0]
