@@ -41,6 +41,98 @@ def create_model_from_config(
     return model
 
 
+def train_and_validate_model(
+    cfg: Config,
+    logger: Logger,
+    metadata: Metadata,
+    preprocessor: pipeline.Pipeline,
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: Optional[np.ndarray] = None,
+    y_val: Optional[np.ndarray] = None,
+    trial: Optional[optuna.trial._trial.Trial] = None,
+) -> Dict[str, Any]:
+    """Train model."""
+    if X_val is None or X_val.size == 0 or y_val is None or y_val.size == 0:
+        logger.warning(
+            "X_val and y_val not provided, using X_train and y_train."
+            "Don't do this in production, especially if you have a large dataset."
+        )
+        X_val, y_val = X_train, y_train
+
+    seed = seed_all(cfg.general.seed, seed_torch=False)
+    logger.info(f"Using seed {seed}")
+
+    logger.warning(
+        "Model creation is handled in the function instead of "
+        "being injected. This is due to Optuna needing to "
+        "create a new model for each trial."
+    )
+    model = create_model_from_config(cfg.train.create_model)
+
+    # Training
+    for epoch in range(cfg.train.num_epochs):
+        logger.info("Training model...")
+        model.fit(X_train, y_train)
+
+        y_pred_train = model.predict(X_train)
+        y_prob_train = model.predict_proba(X_train)
+
+        y_pred_val = model.predict(X_val)
+        y_prob_val = model.predict_proba(X_val)
+
+        performance_train = calculate_classification_metrics(
+            y=y_train,
+            y_pred=y_pred_train,
+            y_prob=y_prob_train,
+            prefix="train",
+        )
+        performance_val = calculate_classification_metrics(
+            y=y_val, y_pred=y_pred_val, y_prob=y_prob_val, prefix="val"
+        )
+
+        # Log performance metrics for the current epoch
+        if not trial:  # if not hyperparameter tuning then we log to mlflow
+            mlflow.log_metrics(
+                metrics={
+                    **performance_train["overall"],
+                    **performance_val["overall"],
+                },
+                step=epoch,
+            )
+
+        if not epoch % cfg.train.log_every_n_epoch:
+            logger.info(
+                f"Epoch: {epoch:02d} | "
+                f"train_loss: {performance_train['overall']['train_loss']:.5f}, "
+                f"val_loss: {performance_val['overall']['val_loss']:.5f}, "
+                f"val_accuracy: {performance_val['overall']['val_accuracy']:.5f}"
+            )
+
+    # Log the model with a signature that defines the schema of the model's inputs and outputs.
+    # When the model is deployed, this signature will be used to validate inputs.
+    if not trial:
+        logger.info(
+            "This is not in a trial, it is likely training a final model with the best hyperparameters"
+        )
+        signature = mlflow.models.infer_signature(X_val, model.predict(X_val))
+
+    model_artifacts = {
+        "preprocessor": preprocessor,
+        "model": model,
+        "overall_performance_train": performance_train["overall"],
+        "report_performance_train": performance_train["report"],
+        "per_class_performance_train": performance_train["per_class"],
+        "overall_performance_val": performance_val["overall"],
+        "report_performance_val": performance_val["report"],
+        "per_class_performance_val": performance_val["per_class"],
+        "signature": signature if not trial else None,
+        "model_config": model.get_params(),
+    }
+    metadata.set_attrs({"model_artifacts": model_artifacts})
+    return metadata
+
+
 def calculate_classification_metrics(
     y: np.ndarray,
     y_pred: np.ndarray,
@@ -128,179 +220,87 @@ def get_experiment_id_via_experiment_name(experiment_name: str) -> int:
     return experiment_id
 
 
-# NOTE: the training loop here is moot since there is `max_iters`, but just
-# want to test the code in MLFlow.
-class Trainer:
-    def __init__(
-        self,
-        cfg: Config,
-        logger: Logger,
-        metadata: Metadata,
-        preprocessor: Preprocessor,
-    ) -> None:
-        self.cfg = cfg
-        self.logger = logger
-        self.metadata = metadata
-        self.preprocessor = preprocessor
+def train_with_best_model_config(
+    cfg: Config,
+    logger: Logger,
+    metadata: Metadata,
+    preprocessor: pipeline.Pipeline,
+    X: np.ndarray,
+    y: np.ndarray,
+) -> Metadata:
+    mlflow.set_experiment(experiment_name=cfg.exp.experiment_name)
 
-    def create_model_from_config(
-        self, model_config: Union[CreateModel, CreateBaselineModel]
-    ) -> BaseEstimator:
-        model_args = model_config.model_dump(mode="python")
-        model_name = model_args.pop("name")
-        module_name, class_name = model_name.rsplit(".", 1)
-        module = import_module(module_name)
-        model_class = getattr(module, class_name)
-        model = model_class(**model_args)
-        return model
+    # nested=True because this is nested under a parent train func in main.py.
+    with mlflow.start_run(**cfg.exp.start_run):
+        run_id = mlflow.active_run().info.run_id
+        logger.info(f"MLflow run_id: {run_id}")
 
-    def create_baseline_model(self) -> BaseEstimator:
-        return self.create_model_from_config(self.cfg.train.create_baseline_model)
+        metadata = train_and_validate_model(
+            cfg=cfg,
+            metadata=metadata,
+            preprocessor=preprocessor,
+            logger=logger,
+            X_train=X,
+            y_train=y,
+            trial=None,  # always None since no more hyperparameter tuning
+        )
 
-    def create_model(self) -> BaseEstimator:
-        return self.create_model_from_config(self.cfg.train.create_model)
+        mlflow.log_params(metadata.model_artifacts["model_config"])
+        mlflow.sklearn.log_model(
+            sk_model=metadata.model_artifacts["model"],
+            artifact_path="registry",
+            signature=metadata.model_artifacts["signature"],
+        )
 
-    def train_model(
-        self,
-        trial: Optional[optuna.trial._trial.Trial] = None,
-    ) -> Dict[str, Any]:
-        """Train model."""
-        seed = seed_all(self.cfg.general.seed, seed_torch=False)
-        self.logger.info(f"Using seed {seed}")
+        logger.info("✅ Logged the model to MLflow.")
 
-        self.logger.info("Training model...")
-        X_train, y_train = self.metadata.X_train, self.metadata.y_train
-        X_val, y_val = self.metadata.X_val, self.metadata.y_val
+        overall_performance_val = metadata.model_artifacts["overall_performance_val"]
+        logger.info(
+            f"✅ Training completed. The model overall_performance is {overall_performance_val}."
+        )
+        logger.info("✅ Logged the model's overall performance to MLflow.")
+        log_all_metrics_to_mlflow(overall_performance_val)
 
-        model = self.create_model()
+        logger.info("✅ Dumping cfg and metadata to artifacts.")
+        dump_cfg_and_metadata(cfg, metadata)
 
-        # Training
-        for epoch in range(self.cfg.train.num_epochs):
-            model.fit(X_train, y_train)
+        stores_path = cfg.dirs.stores.base
 
-            y_pred_train = model.predict(X_train)
-            y_prob_train = model.predict_proba(X_train)
+        mlflow.log_artifacts(
+            local_dir=stores_path,
+            artifact_path=cfg.exp.log_artifacts["artifact_path"],
+        )
 
-            y_pred_val = model.predict(X_val)
-            y_prob_val = model.predict_proba(X_val)
+        # log to model registry
+        # log to model registry
+        experiment_id = get_experiment_id_via_experiment_name(
+            experiment_name=cfg.exp.experiment_name
+        )
 
-            performance_train = calculate_classification_metrics(
-                y=y_train,
-                y_pred=y_pred_train,
-                y_prob=y_prob_train,
-                prefix="train",
-            )
-            performance_val = calculate_classification_metrics(
-                y=y_val, y_pred=y_pred_val, y_prob=y_prob_val, prefix="val"
-            )
+        # FIXME: UNCOMMENT
+        # signature = metadata.model_artifacts["signature"]
+        # mlflow.models.signature.set_signature(
+        #     model_uri=cfg.exp.set_signature["model_uri"].format(
+        #         experiment_id=experiment_id, run_id=run_id
+        #     ),
+        #     signature=signature,
+        # )
 
-            # Log performance metrics for the current epoch
-            if not trial:  # if not hyperparameter tuning then we log to mlflow
-                mlflow.log_metrics(
-                    metrics={
-                        **performance_train["overall"],
-                        **performance_val["overall"],
-                    },
-                    step=epoch,
-                )
+        model_version = mlflow.register_model(
+            model_uri=cfg.exp.register_model["model_uri"].format(
+                experiment_id=experiment_id, run_id=run_id
+            ),  # this is relative to the run_id! rename to registry to be in sync with local stores
+            name=cfg.exp.register_model["name"],
+            tags={
+                "dev-exp-id": experiment_id,
+                "dev-exp-name": cfg.exp.experiment_name,
+                "dev-exp-run-id": run_id,
+                "dev-exp-run-name": cfg.exp.start_run["run_name"],
+            },
+        )
+        mlflow.log_param("model_version", model_version.version)
+        logger.info(
+            f"✅ Logged the model to the model registry with version {model_version.version}."
+        )
 
-            if not epoch % self.cfg.train.log_every_n_epoch:
-                self.logger.info(
-                    f"Epoch: {epoch:02d} | "
-                    f"train_loss: {performance_train['overall']['train_loss']:.5f}, "
-                    f"val_loss: {performance_val['overall']['val_loss']:.5f}, "
-                    f"val_accuracy: {performance_val['overall']['val_accuracy']:.5f}"
-                )
-
-        # Log the model with a signature that defines the schema of the model's inputs and outputs.
-        # When the model is deployed, this signature will be used to validate inputs.
-        if not trial:
-            self.logger.info(
-                "This is not in a trial, it is likely training a final model with the best hyperparameters"
-            )
-            signature = mlflow.models.infer_signature(X_val, model.predict(X_val))
-
-        model_artifacts = {
-            "preprocessor": self.preprocessor,
-            "model": model,
-            "overall_performance_train": performance_train["overall"],
-            "report_performance_train": performance_train["report"],
-            "per_class_performance_train": performance_train["per_class"],
-            "overall_performance_val": performance_val["overall"],
-            "report_performance_val": performance_val["report"],
-            "per_class_performance_val": performance_val["per_class"],
-            "signature": signature if not trial else None,
-            "model_config": model.get_params(),
-        }
-        self.metadata.set_attrs({"model_artifacts": model_artifacts})
-        return self.metadata
-
-    def train(self):
-        mlflow.set_experiment(experiment_name=self.cfg.exp.experiment_name)
-
-        # nested=True because this is nested under a parent train func in main.py.
-        with mlflow.start_run(**self.cfg.exp.start_run):
-            run_id = mlflow.active_run().info.run_id
-            self.logger.info(f"MLflow run_id: {run_id}")
-
-            metadata = self.train_model(trial=None)
-            mlflow.sklearn.log_model(
-                sk_model=metadata.model_artifacts["model"],
-                artifact_path="registry",
-                signature=metadata.model_artifacts["signature"],
-            )
-
-            self.logger.info("✅ Logged the model to MLflow.")
-
-            overall_performance_val = metadata.model_artifacts[
-                "overall_performance_val"
-            ]
-            self.logger.info(
-                f"✅ Training completed. The model overall_performance is {overall_performance_val}."
-            )
-            self.logger.info("✅ Logged the model's overall performance to MLflow.")
-            log_all_metrics_to_mlflow(overall_performance_val)
-
-            self.logger.info("✅ Dumping cfg and metadata to artifacts.")
-            dump_cfg_and_metadata(self.cfg, metadata)
-
-            stores_path = self.cfg.dirs.stores.base
-
-            mlflow.log_artifacts(
-                local_dir=stores_path,
-                artifact_path=self.cfg.exp.log_artifacts["artifact_path"],
-            )
-
-            # log to model registry
-            # log to model registry
-            experiment_id = get_experiment_id_via_experiment_name(
-                experiment_name=self.cfg.exp.experiment_name
-            )
-
-            # FIXME: UNCOMMENT
-            # signature = metadata.model_artifacts["signature"]
-            # mlflow.models.signature.set_signature(
-            #     model_uri=self.cfg.exp.set_signature["model_uri"].format(
-            #         experiment_id=experiment_id, run_id=run_id
-            #     ),
-            #     signature=signature,
-            # )
-
-            model_version = mlflow.register_model(
-                model_uri=self.cfg.exp.register_model["model_uri"].format(
-                    experiment_id=experiment_id, run_id=run_id
-                ),  # this is relative to the run_id! rename to registry to be in sync with local stores
-                name=self.cfg.exp.register_model["name"],
-                tags={
-                    "dev-exp-id": experiment_id,
-                    "dev-exp-name": self.cfg.exp.experiment_name,
-                    "dev-exp-run-id": run_id,
-                    "dev-exp-run-name": self.cfg.exp.start_run["run_name"],
-                },
-            )
-            mlflow.log_param("model_version", model_version.version)
-            self.logger.info(
-                f"✅ Logged the model to the model registry with version {model_version.version}."
-            )
-
-        return metadata
+    return metadata

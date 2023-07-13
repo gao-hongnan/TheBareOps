@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Union, List
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import pandas as pd

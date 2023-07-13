@@ -1,7 +1,9 @@
 """Pipeline without pipeline lol."""
+import functools
 import logging
 import time
 
+import numpy as np
 from common_utils.cloud.gcp.database.bigquery import BigQuery
 from common_utils.cloud.gcp.storage.gcs import GCS
 from common_utils.core.logger import Logger
@@ -10,6 +12,7 @@ from common_utils.versioning.dvc.core import SimpleDVC
 from rich.pretty import pprint
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
+
 from conf.base import Config
 from metadata.core import Metadata
 from pipeline_training.data_cleaning.clean import Clean
@@ -18,14 +21,17 @@ from pipeline_training.data_loading.load import Load
 from pipeline_training.data_resampling.resample import Resampler
 from pipeline_training.model_training.optimize import optimize
 from pipeline_training.model_training.preprocess import Preprocessor
-import numpy as np
-from pipeline_training.model_training.train import Trainer, create_model_from_config
+from pipeline_training.model_training.train import (
+    create_model_from_config,
+    train_and_validate_model,
+    train_with_best_model_config,
+)
 from pipeline_training.utils.common import (
     compare_test_case,
     compare_test_cases,
     log_data_splits_summary,
 )
-from schema.core import RawSchema, CleanedSchema
+from schema.core import CleanedSchema, RawSchema
 
 # pylint: disable=no-member
 
@@ -290,29 +296,33 @@ compare_test_cases(
 # print(f"Accuracy: {accuracy}")
 # time.sleep(100)
 
-# trainer = Trainer(cfg=cfg, metadata=metadata, logger=logger, preprocessor=preprocessor)
-# metadata = trainer.train_model(trial=None)
-# metadata = train_model(
-#     cfg=cfg, logger=logger, metadata=metadata, model=model, trial=None
-# )
 
 # NOTE: optimize.py
+partial_train_and_validate_model = functools.partial(
+    train_and_validate_model,
+    preprocessor=preprocessor,
+    logger=logger,
+    X_train=X_train,
+    y_train=y_train,
+    X_val=X_val,
+    y_val=y_val,
+)
 metadata, cfg = optimize(
-    cfg=cfg, metadata=metadata, logger=logger, preprocessor=preprocessor
+    cfg=cfg, logger=logger, metadata=metadata, partial=partial_train_and_validate_model
 )
 
 # train on best hyperparameters
 logger.info(
-    "Training model with best hyperparameters...Updating `X_train` to `X` and `y_train` to `y`"
+    "Training model with best hyperparameters..."
+    "Updating `X_train` to `X` and `y_train` to `y`"
 )
 # TODO: but i did not for simplicity sake.
 # X = preprocessor.transform(X)
 # metadata.X_train = X
 # metadata.y_train = y.to_numpy()
 
-trainer = Trainer(cfg=cfg, metadata=metadata, logger=logger, preprocessor=preprocessor)
-metadata = trainer.train()
 
+metadata = train_with_best_model_config(cfg, logger, metadata, preprocessor, X=X, y=y)
 compare_test_cases(
     actual_list=[metadata.best_params, metadata.model_artifacts["model_config"]],
     expected_list=[

@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, List
+from typing import Any, Dict, List, Optional, Union
 
-import pandas as pd
-from prettytable import PrettyTable
-from common_utils.core.logger import Logger
 import numpy as np
+import pandas as pd
+from common_utils.core.logger import Logger
+from prettytable import PrettyTable
 
 
 def compare_test_case(

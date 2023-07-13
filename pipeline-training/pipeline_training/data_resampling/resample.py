@@ -28,7 +28,6 @@ from common_utils.core.logger import Logger
 from conf.base import Config
 from metadata.core import Metadata
 
-
 # NOTE: This is not similar to PyTorch Dataset or DataLoader.
 # It is merely using getitem to get "splits" of data.
 # The real generator is get_batches.
