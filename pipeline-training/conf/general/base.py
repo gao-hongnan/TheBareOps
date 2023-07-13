@@ -1,12 +1,12 @@
 import os
-from typing import Any, ClassVar, Dict, List, Literal, Union
+from typing import Any, Literal, Union
 
 from common_utils.versioning.git.core import get_git_commit_hash
 from pydantic import BaseModel, Field
 
 
 class General(BaseModel):
-    pipeline_name: str = None
+    pipeline_name: str = "thebareops-pipeline-training"
     seed: int = 1992
 
     git_commit_hash: Union[str, Literal["N/A"]] = Field(

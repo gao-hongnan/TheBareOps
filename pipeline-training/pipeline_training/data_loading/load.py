@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
-from common_utils.core.decorators.timer import timer
 from common_utils.core.logger import Logger
 from common_utils.versioning.dvc.core import SimpleDVC
 
@@ -124,7 +123,6 @@ class Load:
         attr_dict = {"raw_dvc_metadata": raw_dvc_metadata}
         return attr_dict
 
-    @timer(display_table=True)
     def run(self) -> Metadata:
         """
         Executes the data loading and optional DVC tracking process.

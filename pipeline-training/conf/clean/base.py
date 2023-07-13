@@ -20,6 +20,34 @@ class LoadToLocal(BaseModel):
 
 
 class ExtractFeaturesAndTarget(BaseModel):
+    """
+    A Pydantic model representing the extraction of features and target data
+    from a dataset.
+
+    Attributes
+    ----------
+    feature_columns : List[str]
+        A list of column names to use as features.
+        Default is
+        [
+            "open",
+            "high",
+            "low",
+            "volume",
+            "number_of_trades",
+            "taker_buy_base_asset_volume",
+            "taker_buy_quote_asset_volume",
+        ]
+
+    target_columns : Union[str, List[str]]
+        A column name or a list of column names to use as target(s).
+        Default is 'price_increase'.
+
+    as_dataframe : Literal[True, False]
+        A boolean indicating whether the extracted data should be returned as
+        a pandas DataFrame. Default is True.
+    """
+
     feature_columns: List[str] = Field(
         default=[
             "open",
@@ -41,6 +69,16 @@ class ExtractFeaturesAndTarget(BaseModel):
 
 
 class CastColumns(BaseModel):
+    """
+    Represents casting of DataFrame columns.
+
+    Attributes
+    ----------
+    column_types : Dict[str, str]
+        Dict of column names and types to cast to.
+        Default has types for 'utc_datetime', 'open', etc.
+    """
+
     column_types: Dict[str, str] = Field(
         default={
             "utc_datetime": "datetime64[ns]",
@@ -62,6 +100,22 @@ class CastColumns(BaseModel):
 
 
 class Clean(BaseModel):
+    """
+    Represents cleaning of a dataset.
+
+    Attributes
+    ----------
+    load_to_local : LoadToLocal
+        Model for loading data to local. Default is a default `LoadToLocal` instance.
+
+    cast_columns : CastColumns
+        Model for casting columns. Default is a default `CastColumns` instance.
+
+    extract_features_and_target : ExtractFeaturesAndTarget
+        Model for extracting features and target data.
+        Default is an `ExtractFeaturesAndTarget` instance with `as_dataframe` set to True.
+    """
+
     load_to_local: LoadToLocal = Field(
         default=LoadToLocal(), description="Load Processed Data to Local Machine."
     )

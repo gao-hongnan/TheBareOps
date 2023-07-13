@@ -16,7 +16,6 @@ NOTE:
 
 import pandas as pd
 from common_utils.core.base import Connection
-from common_utils.core.decorators.timer import timer
 from common_utils.core.logger import Logger
 
 from conf.base import Config
@@ -101,7 +100,6 @@ class Extract:
             self.logger.error(f"❌ Data extraction failed. Error: {error}")
             raise error
 
-    @timer(display_table=True)
     def run(self) -> Metadata:
         """
         Runs the data extraction pipeline.

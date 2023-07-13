@@ -125,7 +125,13 @@ class Clean:
         if not as_dataframe:
             X = X.values
             y = y.values
-        attr_dict = {"X": X, "y": y}
+        attr_dict = {
+            "X": X,
+            "y": y,
+            "feature_columns": feature_columns,
+            "target_columns": target_columns,
+        }
+
         return attr_dict
 
     def feature_engineer(self, df: pd.DataFrame) -> pd.DataFrame:

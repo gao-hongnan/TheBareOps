@@ -109,7 +109,7 @@ class Environment(BaseModel):
         """
         if not is_docker() and not is_kubernetes():
             # TODO: Consider using the same logger instead of rich.
-            rich.print("Not running inside docker")
+            # rich.print("Not running inside docker")
             load_env_vars(root_dir=ROOT_DIR)
 
         # NOTE: This assumes that all the env variables defined in

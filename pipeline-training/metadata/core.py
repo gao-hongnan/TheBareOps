@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, List
 
 import numpy as np
 import pandas as pd
@@ -19,10 +19,6 @@ class Metadata:
     # e.g. if the pipeline fails at a certain stage, we can use this to restart
     # from that stage.
 
-    # general
-    pipeline_name: str = None
-    git_commit_hash: str = None
-
     # inside extract.py
     raw_df: pd.DataFrame = None
     raw_num_rows: int = None
@@ -31,16 +27,13 @@ class Metadata:
     raw_table_name: str = None
     raw_query: str = None
 
-    # validate_raw
-    raw_validation_dict: Dict[str, Any] = None
-
     # inside load.py
     raw_file_size: int = None
     raw_file_format: str = None
     raw_filepath: str = None
     raw_dvc_metadata: Dict[str, Any] = None
 
-    # inside cleaner.py
+    # inside clean.py
     processed_df: pd.DataFrame = None
     processed_num_rows: int = None
     processed_num_cols: int = None
@@ -49,6 +42,8 @@ class Metadata:
     processed_dvc_metadata: Dict[str, Any] = None
     X: Union[pd.DataFrame, np.ndarray] = None
     y: Union[pd.DataFrame, np.ndarray] = None
+    feature_columns: List[str] = None
+    target_columns: Union[str, List[str]] = None
 
     # inside resampler.py
     X_train: pd.DataFrame = None

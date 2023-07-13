@@ -10,3 +10,14 @@ bash make_venv.sh venv --pyproject --dev && \
 rm make_venv.sh && \
 source venv/bin/activate
 ```
+
+## Experiment Tracking
+
+```bash
+# https://stackoverflow.com/questions/69818376/localhost5000-unavailable-in-macos-v12-monterey
+# mlflow server -h 0.0.0.0 -p 5000 --backend-store-uri $PWD/stores/mlruns
+mlflow server --backend-store-uri $PWD/mlruns
+pgrep -f mlflow | xargs kill
+```
+
+
