@@ -25,6 +25,8 @@ from pipeline_training.model_training.preprocess import Preprocessor
 from pipeline_training.model_training.train import (
     create_model_from_config,
     train_and_validate_model,
+)
+from pipeline_training.model_training.train_with_best_hyperparameters import (
     train_with_best_model_config,
 )
 from pipeline_training.utils.common import log_data_splits_summary
@@ -344,8 +346,15 @@ logger.info(
     "Training model with best hyperparameters..."
     "Updating `X_train` to `X` and `y_train` to `y`"
 )
-
-metadata = train_with_best_model_config(cfg, logger, metadata, preprocessor, X=X, y=y)
+# NOTE: train.py
+X = preprocessor.transform(X)
+y = label_encoder.transform(y)
+# TODO: Uncomment when in production, for legacy reasons I still train the best params
+# on X_train and y_train...LOL
+# metadata = train_with_best_model_config(cfg, logger, metadata, preprocessor, X=X, y=y)
+metadata = train_with_best_model_config(
+    cfg, logger, metadata, preprocessor, X=X_train, y=y_train
+)
 compare_test_cases(
     actual_list=[metadata.model_artifacts["model_config"]],
     expected_list=[
@@ -376,11 +385,19 @@ compare_test_cases(
     description_list=["best_model_configs"],
     logger=logger,
 )
-# pprint(metadata)
-best_model = create_model_from_config(cfg.train.create_model)
-best_model.fit(X_train, y_train)
-pprint(best_model.get_params())
 
+# best_model = create_model_from_config(cfg.train.create_model)
+best_model = metadata.model_artifacts["model"]
+compare_test_case(
+    actual=create_model_from_config(cfg.train.create_model).get_params(),
+    expected=best_model.get_params(),
+    description="Assert that the best model from the metadata is"
+    " the same as the best model from the config.",
+    logger=logger,
+)
+best_model.fit(X_train, y_train)
+
+# NOTE: evaluate.py
 y_pred_holdout = best_model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred_holdout)
 print(f"Accuracy: {accuracy}")
