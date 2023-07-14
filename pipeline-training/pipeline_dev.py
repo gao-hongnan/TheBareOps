@@ -8,6 +8,7 @@ from common_utils.cloud.gcp.database.bigquery import BigQuery
 from common_utils.cloud.gcp.storage.gcs import GCS
 from common_utils.core.logger import Logger
 from common_utils.data_validator.core import DataFrameValidator
+from common_utils.tests.core import compare_test_case, compare_test_cases
 from common_utils.versioning.dvc.core import SimpleDVC
 from rich.pretty import pprint
 from sklearn.metrics import accuracy_score
@@ -26,7 +27,6 @@ from pipeline_training.model_training.train import (
     train_and_validate_model,
     train_with_best_model_config,
 )
-from common_utils.tests.core import compare_test_case, compare_test_cases
 from pipeline_training.utils.common import log_data_splits_summary
 from schema.core import CleanedSchema, RawSchema
 
@@ -307,7 +307,37 @@ partial_train_and_validate_model = functools.partial(
 metadata, cfg = optimize(
     cfg=cfg, logger=logger, metadata=metadata, partial=partial_train_and_validate_model
 )
-# time.sleep(10000)
+compare_test_cases(
+    actual_list=[
+        cfg.train.create_model.model_dump(mode="python"),
+        metadata.best_params,
+    ],
+    expected_list=[
+        {
+            "name": "sklearn.linear_model.SGDClassifier",
+            "loss": "log_loss",
+            "penalty": "l2",
+            "alpha": 0.00016492491019397902,
+            "max_iter": 10,
+            "learning_rate": "optimal",
+            "eta0": 0.1,
+            "power_t": 0.13347885687354633,
+            "warm_start": True,
+            "random_state": 1992,
+        },
+        {
+            "model__alpha": 0.00016492491019397902,
+            "model__power_t": 0.13347885687354633,
+            "best_trial": 1,
+        },
+    ],
+    description_list=[
+        "Check if cfg updates the best config from Optuna's run.",
+        "Best Params from Optuna.",
+    ],
+    logger=logger,
+)
+
 # train on best hyperparameters
 # NOTE: I did not change X_train to X and y_train to y here, in reality you should.
 logger.info(
@@ -315,18 +345,12 @@ logger.info(
     "Updating `X_train` to `X` and `y_train` to `y`"
 )
 
-
 metadata = train_with_best_model_config(cfg, logger, metadata, preprocessor, X=X, y=y)
 compare_test_cases(
-    actual_list=[metadata.best_params, metadata.model_artifacts["model_config"]],
+    actual_list=[metadata.model_artifacts["model_config"]],
     expected_list=[
         {
-            "model__alpha": 0.00018152669990587287,
-            "model__power_t": 0.2685947407265318,
-            "best_trial": 0,
-        },
-        {
-            "alpha": 0.00018152669990587287,
+            "alpha": 0.00016492491019397902,
             "average": False,
             "class_weight": None,
             "early_stopping": False,
@@ -340,7 +364,7 @@ compare_test_cases(
             "n_iter_no_change": 5,
             "n_jobs": None,
             "penalty": "l2",
-            "power_t": 0.2685947407265318,
+            "power_t": 0.13347885687354633,
             "random_state": 1992,
             "shuffle": True,
             "tol": 0.001,
@@ -349,13 +373,13 @@ compare_test_cases(
             "warm_start": True,
         },
     ],
-    description_list=["best_params"],
+    description_list=["best_model_configs"],
     logger=logger,
 )
-pprint(metadata)
-
+# pprint(metadata)
 best_model = create_model_from_config(cfg.train.create_model)
 best_model.fit(X_train, y_train)
+pprint(best_model.get_params())
 
 y_pred_holdout = best_model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred_holdout)

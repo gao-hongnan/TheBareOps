@@ -70,7 +70,7 @@ class Optimize(BaseModel):
     )
     create_study: Dict[str, Any] = {
         "study_name": "imdb_sgd_study",
-        "direction": "minimize",
+        "direction": "maximize",
     }
     sampler: Dict[str, Any] = {
         "sampler_name": "optuna.samplers.TPESampler",

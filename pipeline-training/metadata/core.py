@@ -73,6 +73,7 @@ class Metadata:
     # inside optimize.py
     # trials is trial number to trial dict
     trials: Dict[int, Dict[str, Any]] = None
+    trials_df: pd.DataFrame = None
     best_params: Dict[str, Any] = None
 
     def release(self, attribute: str) -> Any:

@@ -230,6 +230,15 @@ def train_with_best_model_config(
     mlflow.set_experiment(experiment_name=cfg.exp.experiment_name)
 
     # nested=True because this is nested under a parent train func in main.py.
+    run_name: str = "_".join(
+        [
+            cfg.general.pipeline_name,
+            cfg.train.create_model.name,
+            str(cfg.train.num_epochs),
+        ]
+    )
+
+    cfg.exp.start_run["run_name"] = run_name
     with mlflow.start_run(**cfg.exp.start_run):
         run_id = mlflow.active_run().info.run_id
         logger.info(f"MLflow run_id: {run_id}")
