@@ -20,6 +20,10 @@ from pipeline_training.data_cleaning.clean import Clean
 from pipeline_training.data_extraction.extract import Extract
 from pipeline_training.data_loading.load import Load
 from pipeline_training.data_resampling.resample import Resampler
+from pipeline_training.model_evaluation.evaluate import (
+    bias_variance,
+    predict_on_holdout_set,
+)
 from pipeline_training.model_training.optimize import optimize
 from pipeline_training.model_training.preprocess import Preprocessor
 from pipeline_training.model_training.train import (
@@ -386,23 +390,58 @@ compare_test_cases(
     logger=logger,
 )
 
-# best_model = create_model_from_config(cfg.train.create_model)
 best_model = metadata.model_artifacts["model"]
-compare_test_case(
-    actual=create_model_from_config(cfg.train.create_model).get_params(),
-    expected=best_model.get_params(),
-    description="Assert that the best model from the metadata is"
-    " the same as the best model from the config.",
+compare_test_cases(
+    actual_list=[
+        create_model_from_config(cfg.train.create_model).get_params(),
+        metadata.model_artifacts["report_performance_val"]["val_confusion_matrix"],
+    ],
+    expected_list=[best_model.get_params(), np.array([[918, 190], [245, 747]])],
+    description_list=[
+        "Assert that the best model from the metadata is"
+        " the same as the best model from the config.",
+        "Assert that the val confusion matrix is correct.",
+    ],
     logger=logger,
 )
-best_model.fit(X_train, y_train)
 
 # NOTE: evaluate.py
-y_pred_holdout = best_model.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred_holdout)
-print(f"Accuracy: {accuracy}")
-assert accuracy == 0.8155555555555556
+metadata = predict_on_holdout_set(
+    cfg=cfg,
+    metadata=metadata,
+    logger=logger,
+    model=best_model,
+    X_test=X_test,
+    y_test=y_test,
+)
+compare_test_cases(
+    actual_list=[metadata.holdout_performance["overall"]],
+    expected_list=[
+        {
+            "holdout_loss": 0.42429274293189634,
+            "holdout_precision": 0.8163131313131314,
+            "holdout_recall": 0.8155555555555556,
+            "holdout_f1": 0.8150186835440518,
+            "holdout_accuracy": 0.8155555555555556,
+            "holdout_balanced_accuracy": 0.8132465680156891,
+            "holdout_roc_auc": 0.8951684792298091,
+            "holdout_precision_recall_auc": 0.8952626338839365,
+            "holdout_brier_score": 0.1382997575923305,
+        }
+    ],
+    description_list=["Check Holdout Performance"],
+    logger=logger,
+)
 
+metadata = bias_variance(
+    cfg, metadata, logger, best_model, X_train, y_train, X_test, y_test
+)
+compare_test_cases(
+    actual_list=[metadata.avg_expected_loss, metadata.avg_bias, metadata.avg_variance],
+    expected_list=[0.25125555555555557, 0.16444444444444445, 0.18630000000000002],
+    description_list=["avg_expected_loss", "avg_bias", "avg_variance"],
+    logger=logger,
+)
 
 # NOTE:
 # BASELINE MODEL

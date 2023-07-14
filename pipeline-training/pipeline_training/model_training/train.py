@@ -1,3 +1,9 @@
+"""Training logic.
+
+
+TODO:
+- make metrics an abstract object instead of dict see my notebook
+"""
 import pickle
 import warnings
 from importlib import import_module
@@ -12,6 +18,7 @@ from sklearn import pipeline
 from sklearn.base import BaseEstimator
 from sklearn.metrics import (
     accuracy_score,
+    average_precision_score,
     balanced_accuracy_score,
     brier_score_loss,
     classification_report,
@@ -20,6 +27,7 @@ from sklearn.metrics import (
     precision_recall_fscore_support,
     roc_auc_score,
 )
+from sklearn.preprocessing import label_binarize
 
 from conf.base import Config
 from conf.train.base import CreateBaselineModel, CreateModel
@@ -111,7 +119,8 @@ def train_and_validate_model(
     # When the model is deployed, this signature will be used to validate inputs.
     if not trial:
         logger.info(
-            "This is not in a trial, it is likely training a final model with the best hyperparameters"
+            "This is not in a trial, it is likely training a final model with"
+            " the best hyperparameters"
         )
         signature = mlflow.models.infer_signature(X_val, model.predict(X_val))
 
@@ -135,50 +144,67 @@ def calculate_classification_metrics(
     y: np.ndarray,
     y_pred: np.ndarray,
     y_prob: np.ndarray,
+    classes: Optional[np.ndarray] = None,
     prefix: str = "val",
 ) -> Dict[str, float]:
     """Predict on holdout set."""
     # TODO: make metrics an abstract object instead of dict
     performance = {"overall": {}, "report": {}, "per_class": {}}
 
-    classes = np.unique(y)
-    num_classes = len(classes)
+    if classes is None:
+        classes = np.unique(y)
+        num_classes = len(classes)
+    else:
+        num_classes = len(classes)
 
     prf_metrics = precision_recall_fscore_support(y, y_pred, average="weighted")
-    test_loss = log_loss(y, y_prob)
-    test_accuracy = accuracy_score(y, y_pred)
-    test_balanced_accuracy = balanced_accuracy_score(y, y_pred)
+    loss = log_loss(y, y_prob)
+    accuracy = accuracy_score(y, y_pred)
+    balanced_accuracy = balanced_accuracy_score(y, y_pred)
 
     # Brier score
     if num_classes == 2:
-        test_brier_score = brier_score_loss(y, y_prob[:, 1])
-        test_roc_auc = roc_auc_score(y, y_prob[:, 1])
+        brier_score = brier_score_loss(y, y_prob[:, 1])
+        roc_auc = roc_auc_score(y, y_prob[:, 1])
+        precision_recall_auc = average_precision_score(y, y_prob[:, 1])
+
     else:
-        test_brier_score = np.mean(
+        brier_score = np.mean(
             [brier_score_loss(y == i, y_prob[:, i]) for i in range(num_classes)]
         )
-        test_roc_auc = roc_auc_score(y, y_prob, multi_class="ovr")
+        roc_auc = roc_auc_score(y, y_prob, multi_class="ovr")
+        # Convert y into a binary (one-hot encoded) array for multiclass PR AUC
+        y_bin = label_binarize(y, classes=list(range(num_classes)))
+        # Compute the average precision score for each class
+        precision_recall_auc = np.mean(
+            [
+                average_precision_score(y_bin[:, i], y_prob[:, i])
+                for i in range(num_classes)
+            ]
+        )
 
     overall_performance = {
-        f"{prefix}_loss": test_loss,
+        f"{prefix}_loss": loss,
         f"{prefix}_precision": prf_metrics[0],
         f"{prefix}_recall": prf_metrics[1],
         f"{prefix}_f1": prf_metrics[2],
-        f"{prefix}_accuracy": test_accuracy,
-        f"{prefix}_balanced_accuracy": test_balanced_accuracy,
-        f"{prefix}_roc_auc": test_roc_auc,
-        f"{prefix}_brier_score": test_brier_score,
+        f"{prefix}_accuracy": accuracy,
+        f"{prefix}_balanced_accuracy": balanced_accuracy,
+        f"{prefix}_roc_auc": roc_auc,
+        f"{prefix}_precision_recall_auc": precision_recall_auc,
+        f"{prefix}_brier_score": brier_score,
     }
     performance["overall"] = overall_performance
 
-    test_confusion_matrix = confusion_matrix(y, y_pred)
-    test_classification_report = classification_report(
+    # reserved valuables
+    confusion_matrix_ = confusion_matrix(y, y_pred)
+    classification_report_ = classification_report(
         y, y_pred, output_dict=True
     )  # output_dict=True to get result as dictionary
 
     performance["report"] = {
-        "test_confusion_matrix": test_confusion_matrix,
-        "test_classification_report": test_classification_report,
+        f"{prefix}_confusion_matrix": confusion_matrix_,
+        f"{prefix}_classification_report": classification_report_,
     }
 
     # Per-class metrics

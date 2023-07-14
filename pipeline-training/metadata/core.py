@@ -76,6 +76,12 @@ class Metadata:
     trials_df: pd.DataFrame = None
     best_params: Dict[str, Any] = None
 
+    # inside evaluate.py
+    holdout_performance: Dict[str, float] = None
+    avg_expected_loss: float = None
+    avg_bias: float = None
+    avg_variance: float = None
+
     def release(self, attribute: str) -> Any:
         """Releases an attribute from the Metadata instance."""
         self.__setattr__(attribute, None)

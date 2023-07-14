@@ -5,6 +5,7 @@ from rich.pretty import pprint
 from conf.clean.base import Clean
 from conf.directory.base import ROOT_DIR, Directories
 from conf.environment.base import Environment
+from conf.evaluate.base import Evaluate
 from conf.experiment_tracking.base import Experiment
 from conf.extract.base import Extract
 from conf.general.base import General
@@ -27,6 +28,7 @@ class Config(BaseModel):
     resample: Resample = Resample()
     train: Train = Train()
     exp: Experiment = Experiment()
+    evaluate: Evaluate = Evaluate()
     general: General = General(pipeline_name="pipeline-training")
 
 

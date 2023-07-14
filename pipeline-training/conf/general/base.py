@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 class General(BaseModel):
     pipeline_name: str = "thebareops-pipeline-training"
     seed: int = 1992
+    device: str = "cpu"  # TODO: add dynamic device generation
 
     git_commit_hash: Union[str, Literal["N/A"]] = Field(
         default=None, model_post_init=True
