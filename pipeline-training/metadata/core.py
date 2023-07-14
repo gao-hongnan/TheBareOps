@@ -69,6 +69,11 @@ class Metadata:
 
     # inside train.py
     model_artifacts: Dict[str, Any] = None
+    run_id: str = None
+    model_version: str = None
+    experiment_id: str = None
+    experiment_name: str = None
+    artifact_uri: str = None
 
     # inside optimize.py
     # trials is trial number to trial dict

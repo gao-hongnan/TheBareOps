@@ -11,8 +11,10 @@ from common_utils.data_validator.core import DataFrameValidator
 from common_utils.tests.core import compare_test_case, compare_test_cases
 from common_utils.versioning.dvc.core import SimpleDVC
 from rich.pretty import pprint
-from sklearn.metrics import accuracy_score
+
 from sklearn.preprocessing import LabelEncoder
+from mlflow.tracking import MlflowClient
+from common_utils.experiment_tracking.promoter.core import MLFlowPromotionManager
 
 from conf.base import Config
 from metadata.core import Metadata
@@ -413,6 +415,7 @@ metadata = predict_on_holdout_set(
     model=best_model,
     X_test=X_test,
     y_test=y_test,
+    run_id=metadata.run_id,
 )
 compare_test_cases(
     actual_list=[metadata.holdout_performance["overall"]],
@@ -434,7 +437,15 @@ compare_test_cases(
 )
 
 metadata = bias_variance(
-    cfg, metadata, logger, best_model, X_train, y_train, X_test, y_test
+    cfg,
+    metadata,
+    logger,
+    best_model,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    run_id=metadata.run_id,
 )
 compare_test_cases(
     actual_list=[metadata.avg_expected_loss, metadata.avg_bias, metadata.avg_variance],
@@ -442,6 +453,15 @@ compare_test_cases(
     description_list=["avg_expected_loss", "avg_bias", "avg_variance"],
     logger=logger,
 )
+
+# NOTE: validate_and_promote.py
+# promote.py
+client = MlflowClient(tracking_uri=cfg.exp.tracking_uri)
+promoter = MLFlowPromotionManager(
+    client=client, model_name=cfg.exp.register_model["name"], logger=logger
+)
+
+promoter.promote_to_production(metric_name=cfg.train.objective.monitor)
 
 # NOTE:
 # BASELINE MODEL

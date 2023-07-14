@@ -8,7 +8,7 @@ class Experiment(BaseModel):
     tracking_uri: str = None
     start_run: Dict[str, Any] = Field(
         default={
-            "run_name": "tuned_thebareops_sgd_5_epochs",
+            "run_name": "tuned_thebareops_sgd_5_epochs",  # Can be changed during runtime
             "nested": True,
             "description": "TheBareOps with sklearn SGDClassifier",
             "tags": {"framework": "sklearn", "type": "classification"},

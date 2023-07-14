@@ -28,6 +28,8 @@ def train_with_best_model_config(
         [
             cfg.general.pipeline_name,
             cfg.train.create_model.name,
+            str(metadata.processed_num_rows),
+            "rows",
             str(cfg.train.num_epochs),
             "epochs",
         ]
@@ -103,6 +105,16 @@ def train_with_best_model_config(
         mlflow.log_param("model_version", model_version.version)
         logger.info(
             f"✅ Logged the model to the model registry with version {model_version.version}."
+        )
+
+        metadata.set_attrs(
+            {
+                "run_id": run_id,
+                "model_version": model_version.version,
+                "experiment_id": experiment_id,
+                "run_name": run_name,
+                "artifact_uri": mlflow.get_artifact_uri(),
+            }
         )
 
     return metadata

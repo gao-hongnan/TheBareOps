@@ -3,10 +3,11 @@
 import numpy as np
 from common_utils.core.logger import Logger
 from sklearn.base import BaseEstimator
-
+from typing import Optional
 from conf.base import Config
 from metadata.core import Metadata
 from pipeline_training.model_training.train import calculate_classification_metrics
+import mlflow
 
 
 # TODO: dump confusion matrix and classification report to image/media.
@@ -17,6 +18,7 @@ def predict_on_holdout_set(
     model: BaseEstimator,
     X_test: np.ndarray,
     y_test: np.ndarray,
+    run_id: Optional[str] = None,
 ) -> Metadata:
     """Predict on holdout set."""
     logger.info("Predicting on holdout set...")
@@ -28,6 +30,11 @@ def predict_on_holdout_set(
         y_prob=y_prob,
         **cfg.evaluate.predict_on_holdout_set.model_dump(mode="python"),
     )
+
+    if run_id is not None:
+        # Log metrics to the same MLflow session
+        with mlflow.start_run(run_id=run_id):
+            mlflow.log_metrics(metrics=performance["overall"], step=None)
 
     metadata.set_attrs(attr_dict={"holdout_performance": performance})
     return metadata
@@ -204,6 +211,7 @@ def bias_variance(
     y_train: np.ndarray,
     X_test: np.ndarray,
     y_test: np.ndarray,
+    run_id: Optional[str] = None,
 ) -> Metadata:
     """We use the `mlxtend` library to estimate the Bias-Variance Tradeoff in
     our final model. The core idea behind this function is to use bagging
@@ -220,6 +228,18 @@ def bias_variance(
         **cfg.evaluate.bias_variance.model_dump(mode="python"),
     )
 
+    if run_id is not None:
+        # Log metrics to the same MLflow session
+        with mlflow.start_run(run_id=run_id):
+            mlflow.log_metrics(
+                metrics={
+                    "avg_expected_loss": avg_expected_loss,
+                    "avg_bias": avg_bias,
+                    "avg_variance": avg_variance,
+                },
+                step=None,
+            )
+
     logger.info(f"Average expected loss: {avg_expected_loss}")
     logger.info(f"Average bias: {avg_bias}")
     logger.info(f"Average variance: {avg_variance}")
@@ -228,7 +248,7 @@ def bias_variance(
         {
             "avg_expected_loss": avg_expected_loss,
             "avg_bias": avg_bias,
-            "avg_var": avg_variance,
+            "avg_variance": avg_variance,
         }
     )
     return metadata

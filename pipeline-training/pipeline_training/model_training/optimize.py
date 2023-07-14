@@ -99,10 +99,11 @@ def objective(
     metadata = partial(cfg=cfg, trial=trial, metadata=metadata)
 
     overall_performance_val = metadata.model_artifacts["overall_performance_val"]
-    trial.set_user_attr("val_accuracy", overall_performance_val["val_accuracy"])
-    trial.set_user_attr("val_f1", overall_performance_val["val_f1"])
-    trial.set_user_attr("val_loss", overall_performance_val["val_loss"])
-    return overall_performance_val["val_accuracy"]
+
+    for key, value in overall_performance_val.items():
+        trial.set_user_attr(key, value)
+
+    return overall_performance_val[cfg.train.objective.monitor]
 
 
 def create_pruner(pruner_config: Dict[str, Any]) -> optuna.pruners.BasePruner:

@@ -84,6 +84,10 @@ class Optimize(BaseModel):
     n_trials: int = 3
 
 
+class Objective(BaseModel):
+    monitor: str = "val_accuracy"
+
+
 class Train(BaseModel):
     create_baseline_model: CreateBaselineModel = Field(default=CreateBaselineModel())
     create_model: CreateModel = Field(default=CreateModel())
@@ -92,6 +96,8 @@ class Train(BaseModel):
     create_encoder: CreateEncoder = Field(default=CreateEncoder())
     create_standard_scaler: CreateStandardScaler = Field(default=CreateStandardScaler())
     features_and_targets: FeaturesAndTargets = Field(default=FeaturesAndTargets())
+
+    objective: Objective = Field(default=Objective())
 
     num_epochs: int = Field(default=5)
     log_every_n_epoch: int = Field(default=1)
