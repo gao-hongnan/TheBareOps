@@ -72,7 +72,6 @@ def train_and_validate_model(
 
     # Training
     for epoch in range(cfg.train.num_epochs):
-        logger.info("Training model...")
         model.fit(X_train, y_train)
 
         y_pred_train = model.predict(X_train)

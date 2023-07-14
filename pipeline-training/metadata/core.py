@@ -68,10 +68,11 @@ class Metadata:
     classes: List[int] = None
 
     # inside train.py
-
     model_artifacts: Dict[str, Any] = None
 
-    # inside evaluate.py
+    # inside optimize.py
+    # trials is trial number to trial dict
+    trials: Dict[int, Dict[str, Any]] = None
     best_params: Dict[str, Any] = None
 
     def release(self, attribute: str) -> Any:

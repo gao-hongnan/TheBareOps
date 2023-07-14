@@ -26,11 +26,8 @@ from pipeline_training.model_training.train import (
     train_and_validate_model,
     train_with_best_model_config,
 )
-from pipeline_training.utils.common import (
-    compare_test_case,
-    compare_test_cases,
-    log_data_splits_summary,
-)
+from common_utils.tests.core import compare_test_case, compare_test_cases
+from pipeline_training.utils.common import log_data_splits_summary
 from schema.core import CleanedSchema, RawSchema
 
 # pylint: disable=no-member
@@ -310,16 +307,13 @@ partial_train_and_validate_model = functools.partial(
 metadata, cfg = optimize(
     cfg=cfg, logger=logger, metadata=metadata, partial=partial_train_and_validate_model
 )
-
+# time.sleep(10000)
 # train on best hyperparameters
+# NOTE: I did not change X_train to X and y_train to y here, in reality you should.
 logger.info(
     "Training model with best hyperparameters..."
     "Updating `X_train` to `X` and `y_train` to `y`"
 )
-# TODO: but i did not for simplicity sake.
-# X = preprocessor.transform(X)
-# metadata.X_train = X
-# metadata.y_train = y.to_numpy()
 
 
 metadata = train_with_best_model_config(cfg, logger, metadata, preprocessor, X=X, y=y)
