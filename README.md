@@ -18,6 +18,49 @@
 2. The steps in 1. should be reproduced via `Makefile`.
 3. CI/CD: Currently just setup github actions to test the above workflows.
 
+### Tests
+
+Nest the unit, integration tests section under this section.
+
+```bash
+#!/bin/bash
+
+#!/bin/bash
+
+FOLDERS=(
+    data_cleaning
+    data_extraction
+    data_loading
+    data_resampling
+    data_validation
+    model_evaluation
+    model_training
+    model_validation_and_promotion
+)
+
+create_generic_tests_directories() {
+    mkdir -p tests
+    touch tests/conftest.py
+
+    for dir in "${FOLDERS[@]}"
+    do
+        mkdir -p tests/unit/$dir
+        touch tests/unit/$dir/__init__.py
+        touch tests/unit/$dir/test_${dir}.py
+
+        mkdir -p tests/integration/$dir
+        touch tests/integration/$dir/__init__.py
+        touch tests/integration/$dir/test_${dir}.py
+    done
+
+    # Create system tests directory and test_pipeline.py
+    mkdir -p tests/system
+    touch tests/system/test_pipeline.py
+}
+
+create_generic_tests_directories
+```
+
 ### Code Formatting
 
 For code formatting, you can use tools like

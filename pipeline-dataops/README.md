@@ -5,43 +5,88 @@
 ```bash
 #!/bin/bash
 
-# Create the directories
-mkdir -p pipeline_dataops
-mkdir -p conf
-mkdir -p metadata
+create_files() {
+    touch .dockerignore \
+          .env \
+          .gitignore \
+          Dockerfile \
+          Makefile \
+          README.md \
+          pipeline.py \
+          pyproject.toml \
+          requirements.txt \
+          requirements_dev.txt
+}
 
-# Create inside pipeline_dataops
-mkdir -p pipeline_dataops/extract
-touch pipeline_dataops/extract/__init__.py
+create_conf_directories() {
+    mkdir conf
+    touch conf/__init__.py conf/base.py
 
-# Create the __init__.py files
-touch pipeline_dataops/__init__.py
-touch conf/__init__.py
-touch metadata/__init__.py
+    for dir in directory environment extract general load logger transform
+    do
+        mkdir conf/$dir
+        touch conf/$dir/__init__.py conf/$dir/base.py
+    done
+}
 
-# Create inside conf
-mkdir -p conf/environment
-mkdir -p conf/extract
-mkdir -p conf/load
-mkdir -p conf/transform
-mkdir -p conf/directory
+create_metadata_directory() {
+    mkdir metadata
+    touch metadata/__init__.py metadata/core.py
+}
 
-# Create the __init__.py files
-touch conf/environment/__init__.py conf/environment/base.py
-touch conf/extract/__init__.py conf/extract/base.py
-touch conf/load/__init__.py conf/load/base.py
-touch conf/transform/__init__.py conf/transform/base.py
+create_pipeline_dataops_directories() {
+    mkdir pipeline_dataops
+    touch pipeline_dataops/__init__.py
 
-# Create the .gitignore file
-touch .gitignore
-echo "# Add files and directories to be ignored by git here" > .gitignore
+    for dir in extract load transform validate
+    do
+        mkdir pipeline_dataops/$dir
+        touch pipeline_dataops/$dir/__init__.py pipeline_dataops/$dir/core.py
+    done
+}
 
-# Create .env file
-touch .env
-echo "# Add environment variables here" > .env
+create_schema_directory() {
+    mkdir schema
+    touch schema/__init__.py schema/base.py schema/core.py
+}
 
-# Create the pyproject.toml file
-touch pyproject.toml
+create_scripts_directories() {
+    mkdir -p scripts/docker
+    touch scripts/docker/entrypoint.sh
+
+    mkdir -p scripts/k8s/dataops/config_maps scripts/k8s/dataops/manifests
+}
+
+create_tests_directories() {
+    mkdir tests
+    touch tests/conftest.py
+
+    for dir in integration system unit
+    do
+        mkdir tests/$dir
+        if [ "$dir" != "system" ]; then
+            for subdir in extract load transform
+            do
+                mkdir tests/$dir/$subdir
+                touch tests/$dir/$subdir/test_${subdir}.py
+            done
+        else
+            touch tests/$dir/test_pipeline.py
+        fi
+    done
+}
+
+main() {
+    create_files
+    create_conf_directories
+    create_metadata_directory
+    create_pipeline_dataops_directories
+    create_schema_directory
+    create_scripts_directories
+    create_tests_directories
+}
+
+main
 ```
 
 ## Setup Virtual Environment
