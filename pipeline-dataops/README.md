@@ -479,6 +479,10 @@ docker run -it \
 And remember to pass `--build-arg HOME_DIR=YOUR_HOME_DIR` to `docker build` if
 you want to use a different home directory.
 
+### Docker Push to Google Artifact Registry
+
+...
+
 ### Pull and Test Run Locally
 
 ```bash
@@ -508,3 +512,7 @@ docker run -it \
   --name $IMAGE_NAME \
   us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:$IMAGE_TAG
 ```
+
+### Continuous Integration and Continuous Delivery
+
+...
