@@ -5,6 +5,9 @@
 outputs/
 stores/
 
+# tmp
+tmp.*
+
 # secrets
 gcp-storage-service-account.*
 

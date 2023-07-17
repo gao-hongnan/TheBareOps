@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pipeline-dataops-config
+data:
+  PROJECT_ID: "gao-hongnan"
+  GCS_BUCKET_NAME: "gaohn"
+  GCS_BUCKET_PROJECT_NAME: "thebareops_production"
+  BIGQUERY_RAW_DATASET: "thebareops_production"
+  BIGQUERY_RAW_TABLE_NAME: "raw_binance_btcusdt_spot"
+  BIGQUERY_TRANSFORMED_DATASET: "thebareops_production"
+  BIGQUERY_TRANSFORMED_TABLE_NAME: "processed_binance_btcusdt_spot"

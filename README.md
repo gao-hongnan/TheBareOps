@@ -1,5 +1,11 @@
 # The BareOps
 
+## TODOs
+
+- CI scripts not yet implemented.
+- Refactor `pipeline_dev.py` to `pipeline.py` (`pipeline-training`) and update
+    `Dockerfile`.
+
 ## DevOps
 
 1. Setup DevOps local environment:
@@ -689,10 +695,10 @@ kubectl apply -f scripts/k8s/dataops/manifests/dataops_cronjob.yaml
 giving
 
 ```markdown
-Warning: Autopilot set default resource requests for CronJob default/dataops-cronjob, as resource requests were not specified. See http://g.co/gke/autopilot-defaults
-cronjob.batch/dataops-cronjob created
+Warning: Autopilot set default resource requests for CronJob
+default/dataops-cronjob, as resource requests were not specified. See
+http://g.co/gke/autopilot-defaults cronjob.batch/dataops-cronjob created
 ```
-
 
 This YAML file is a Kubernetes configuration that defines a `CronJob`. Let's
 break down its structure:
@@ -770,35 +776,46 @@ kubectl exec ...
 
 Great, it seems like your CronJob has been created successfully!
 
-The warning message you see is because you have enabled Google Kubernetes Engine (GKE) Autopilot, which automatically sets default resource requests for workloads when resource requests are not specified.
+The warning message you see is because you have enabled Google Kubernetes Engine
+(GKE) Autopilot, which automatically sets default resource requests for
+workloads when resource requests are not specified.
 
 Here are the steps for what you can do next:
 
 0. `kubectl describe cronjob dataops-cronjob` to see the details of the CronJob
-   or in general `kubectl describe pods` to check some errors especially
-   if your CronJob is not running. Can watch your progress like
+   or in general `kubectl describe pods` to check some errors especially if your
+   CronJob is not running. Can watch your progress like
 
     ```markdown
-    Events:
-        Type    Reason     Age   From                                   Message
-        ----    ------     ----  ----                                   -------
-        Normal  Scheduled  11s   gke.io/optimize-utilization-scheduler  Successfully assigned default/dataops-cronjob-28130878-qtbxd to gk3-autopilot-cluster-1-pool-1-ffa4a760-q5lt
-        Normal  Pulling    2s    kubelet                                Pulling image "us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:f7e1be0867bf7d8af67fd0f0da6b6fdb8b7e4346"
+    Events: Type Reason Age From Message ---- ------ ---- ---- ------- Normal
+    Scheduled 11s gke.io/optimize-utilization-scheduler Successfully assigned
+    default/dataops-cronjob-28130878-qtbxd to
+    gk3-autopilot-cluster-1-pool-1-ffa4a760-q5lt Normal Pulling 2s kubelet
+    Pulling image
+    "us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:f7e1be0867bf7d8af67fd0f0da6b6fdb8b7e4346"
     ```
-1. **Check the status of your CronJob**: You can use the `kubectl get cronjobs` command to list the CronJobs in the current namespace. The output should show the status of your CronJob including the last schedule time.
+
+1. **Check the status of your CronJob**: You can use the `kubectl get cronjobs`
+   command to list the CronJobs in the current namespace. The output should show
+   the status of your CronJob including the last schedule time.
 
     ```bash
     kubectl get cronjobs
     ```
 
-2. **View the Job created by the CronJob**: Once the CronJob has been triggered according to its schedule, it creates a Job. You can use `kubectl get jobs` to view the jobs that have been created. You can also use `kubectl describe job <job-name>` to view more details about a specific Job.
+2. **View the Job created by the CronJob**: Once the CronJob has been triggered
+   according to its schedule, it creates a Job. You can use `kubectl get jobs`
+   to view the jobs that have been created. You can also use
+   `kubectl describe job <job-name>` to view more details about a specific Job.
 
     ```bash
     kubectl get jobs
     kubectl describe job <job-name>
     ```
 
-3. **View the logs of the Pods created by the Job**: Each Job creates one or more Pods to execute the task. You can use `kubectl get pods` to view the Pods and `kubectl logs <pod-name>` to view the logs of a specific Pod.
+3. **View the logs of the Pods created by the Job**: Each Job creates one or
+   more Pods to execute the task. You can use `kubectl get pods` to view the
+   Pods and `kubectl logs <pod-name>` to view the logs of a specific Pod.
 
     ```bash
     kubectl get pods
@@ -811,16 +828,19 @@ Here are the steps for what you can do next:
     kubectl logs -f <pod-name>
     ```
 
-4. **Check the result of your data pipeline**: Depending on what your data pipeline does, you might want to check the result. For example, if your data pipeline writes data into a database, you could check the contents of the database to ensure the data has been written correctly.
+4. **Check the result of your data pipeline**: Depending on what your data
+   pipeline does, you might want to check the result. For example, if your data
+   pipeline writes data into a database, you could check the contents of the
+   database to ensure the data has been written correctly.
 
-Remember that a CronJob will run according to the schedule you specified ("*/2 * * * *" in your case, which means every 2 minutes). Make sure your data pipeline can complete within this interval to avoid overlapping runs.
+Remember that a CronJob will run according to the schedule you specified ("_/2
+_ \* \* \*" in your case, which means every 2 minutes). Make sure your data
+pipeline can complete within this interval to avoid overlapping runs.
 
 You can use `kubectl logs <pod-name>` to check the logs of the Pods. Here you
 can find the output of your script (`pipeline.py`), which will help you verify
 whether the script executed successfully or not. If you see the expected output
 in the logs, this indicates that the cronjob is successful.
-
-
 
 ### Set Kubernetes Secrets from the Command Line
 
@@ -869,5 +889,5 @@ MY_VARIABLE, whose value is "Hello, world!".
 This way, you can manage your Kubernetes secrets directly from your terminal,
 which can help you improve the efficiency of your Kubernetes workflows.
 
-
-The folder structure of the mock dataops pipeline (without additional packages like airbyte or dbt
+The folder structure of the mock dataops pipeline (without additional packages
+like airbyte or dbt).
