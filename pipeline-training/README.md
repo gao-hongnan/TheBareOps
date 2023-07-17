@@ -16,6 +16,7 @@ source venv/bin/activate
 ```bash
 # https://stackoverflow.com/questions/69818376/localhost5000-unavailable-in-macos-v12-monterey
 # mlflow server -h 0.0.0.0 -p 5000 --backend-store-uri $PWD/stores/mlruns
+cd pipeline-training && \
 mlflow server --backend-store-uri $PWD/mlruns
 pgrep -f mlflow | xargs kill
 ```

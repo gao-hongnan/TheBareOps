@@ -38,6 +38,11 @@ from pipeline_training.model_training.train_with_best_hyperparameters import (
 from pipeline_training.utils.common import log_data_splits_summary
 from schema.core import CleanedSchema, RawSchema
 
+import mlflow
+
+# mlflow.set_tracking_uri("http://mlflow:mlflow@http://34.142.130.3:5005/")
+
+
 # pylint: disable=no-member
 
 # FIXME: Ask how to modify logger to capture the logs from external modules.
