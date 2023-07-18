@@ -275,6 +275,7 @@ metadata.set_attrs(
         "y_test": y_test,
         "classes": label_encoder.classes_,
         "num_classes": len(label_encoder.classes_),
+        "label_encoder": label_encoder,
     }
 )
 compare_test_cases(

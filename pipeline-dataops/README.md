@@ -479,11 +479,45 @@ docker run -it \
 And remember to pass `--build-arg HOME_DIR=YOUR_HOME_DIR` to `docker build` if
 you want to use a different home directory.
 
-### Docker Push to Google Artifact Registry
+### Push Docker Image to Artifacts Registry
 
-...
+Check `gar_docker_setup` in my `common-utils` on how to set up a container
+registry in GCP.
+
+First build the image again since we need it to be in `linux/amd64` format.
+
+```bash
+export GIT_COMMIT_HASH=$(git rev-parse --short HEAD) && \
+export PROJECT_ID="gao-hongnan" && \
+export REPO_NAME="XXX" && \
+export APP_NAME="XXX" && \
+export REGION="XXX" && \
+docker build \
+--build-arg GIT_COMMIT_HASH=$GIT_COMMIT_HASH \
+-f pipeline-training/Dockerfile \
+--platform=linux/amd64 \
+-t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${APP_NAME}:${GIT_COMMIT_HASH}" \
+.
+```
+
+Then push the image to the container registry.
+
+```bash
+docker push "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${APP_NAME}:${GIT_COMMIT_HASH}" && \
+echo "Successfully pushed ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${APP_NAME}:${GIT_COMMIT_HASH}"
+```
+
+### Deploy Docker Image from Artifacts Registry to Google Kubernetes Engine
+
+Note you do not need to provide the `GIT_COMMIT_HASH` as the image is already
+tagged with the `GIT_COMMIT_HASH`.
+
+- Set up `Expose` to false since this is not a web app.
 
 ### Pull and Test Run Locally
+
+After you push the image to the container registry, you can pull the image and
+run it locally to test.
 
 ```bash
 export GIT_COMMIT_HASH=$(git rev-parse HEAD) && \

@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Union
 import numpy as np
 import pandas as pd
 from sklearn import pipeline
-from sklearn.preprocessing import LabelEncoder
 
 # TODO: Compose Metadata in a similar way as Config instead of scattering.
 # TODO: Add more metadata attributes, for example the GCS path that stores
@@ -61,7 +60,6 @@ class Metadata:
     numeric_features: List[str] = None
     categorical_features: List[str] = None
     preprocessor: pipeline.Pipeline = None
-    label_encoder: LabelEncoder = None
     X_train: np.ndarray = None
     X_val: np.ndarray = None
     X_test: np.ndarray = None
