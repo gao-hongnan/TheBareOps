@@ -37,13 +37,36 @@ from pipeline_training.model_training.train_with_best_hyperparameters import (
 )
 from pipeline_training.utils.common import log_data_splits_summary
 from schema.core import CleanedSchema, RawSchema
+from conf.experiment_tracking.base import Experiment
 
 # pylint: disable=no-member
 
 # FIXME: Ask how to modify logger to capture the logs from external modules.
 
-cfg = Config()
+cfg = Config(
+    exp=Experiment(
+        tracking_uri="http://mlflow:mlflow@34.142.130.3:5005/",
+        set_signature={
+            "model_uri": "gs://engr-nscc-mlflow-bucket/artifacts/{experiment_id}/{run_id}/artifacts/registry"
+        },
+    )
+)
+# import mlflow
 
+# client = mlflow.tracking.MlflowClient(
+#     tracking_uri="http://mlflow:mlflow@34.142.130.3:5005/"
+# )
+# exp_id = client.get_experiment_by_name("thebareops_sgd_study").experiment_id
+# client.delete_experiment(exp_id)
+# client.delete_experiment(exp_id)
+# # client.delete_experiment("3")
+# client.transition_model_version_stage(
+#     name="thebareops_sgd",
+#     version="2",
+#     stage="None",  # Or "Staging", "Archived"
+# )
+
+# time.sleep(100)
 logger = Logger(
     log_file="pipeline_training.log",
     log_root_dir=cfg.dirs.stores.logs,

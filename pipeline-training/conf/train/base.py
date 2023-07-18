@@ -69,7 +69,7 @@ class Optimize(BaseModel):
         }
     )
     create_study: Dict[str, Any] = {
-        "study_name": "imdb_sgd_study",
+        "study_name": "thebareops-sgd-study",
         "direction": "maximize",
     }
     sampler: Dict[str, Any] = {

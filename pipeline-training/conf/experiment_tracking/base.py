@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class Experiment(BaseModel):
-    experiment_name: str = "thebareops_mlops_pipeline"
+    experiment_name: str = "thebareops-pipeline-training"
     tracking_uri: str = None
     start_run: Dict[str, Any] = Field(
         default={

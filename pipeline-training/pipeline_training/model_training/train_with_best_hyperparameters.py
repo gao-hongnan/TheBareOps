@@ -82,13 +82,13 @@ def train_with_best_model_config(
         )
 
         # FIXME: UNCOMMENT
-        # signature = metadata.model_artifacts["signature"]
-        # mlflow.models.signature.set_signature(
-        #     model_uri=cfg.exp.set_signature["model_uri"].format(
-        #         experiment_id=experiment_id, run_id=run_id
-        #     ),
-        #     signature=signature,
-        # )
+        signature = metadata.model_artifacts["signature"]
+        mlflow.models.signature.set_signature(
+            model_uri=cfg.exp.set_signature["model_uri"].format(
+                experiment_id=experiment_id, run_id=run_id
+            ),
+            signature=signature,
+        )
 
         model_version = mlflow.register_model(
             model_uri=cfg.exp.register_model["model_uri"].format(
