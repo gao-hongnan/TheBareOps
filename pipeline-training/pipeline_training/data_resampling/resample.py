@@ -145,6 +145,8 @@ class Resampler:
             "y_train": y_train,
             "y_val": y_val,
             "y_test": y_test,
+            "X_test_original": X_test,
+            "y_test_original": y_test,
         }
         self.logger.info("Updating metadata.")
         self.metadata.set_attrs(attr_dict=attr_dict)

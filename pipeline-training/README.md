@@ -19,5 +19,3 @@ source venv/bin/activate
 mlflow server --backend-store-uri $PWD/mlruns
 pgrep -f mlflow | xargs kill
 ```
-
-

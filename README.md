@@ -1,5 +1,13 @@
 # The BareOps
 
+This pipeline does not care about model performance, one should realise
+that the feature columns contain full information to predict the target
+because `price_increase` is derived as follows:
+
+```python
+df["price_increase"] = (df["close"] > df["open"]).astype(int)
+```
+
 ## TODOs
 
 - CI scripts not yet implemented.

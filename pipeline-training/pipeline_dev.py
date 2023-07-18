@@ -8,15 +8,15 @@ from common_utils.cloud.gcp.database.bigquery import BigQuery
 from common_utils.cloud.gcp.storage.gcs import GCS
 from common_utils.core.logger import Logger
 from common_utils.data_validator.core import DataFrameValidator
+from common_utils.experiment_tracking.promoter.core import MLFlowPromotionManager
 from common_utils.tests.core import compare_test_case, compare_test_cases
 from common_utils.versioning.dvc.core import SimpleDVC
-from rich.pretty import pprint
-
-from sklearn.preprocessing import LabelEncoder
 from mlflow.tracking import MlflowClient
-from common_utils.experiment_tracking.promoter.core import MLFlowPromotionManager
+from rich.pretty import pprint
+from sklearn.preprocessing import LabelEncoder
 
 from conf.base import Config
+from conf.experiment_tracking.base import Experiment
 from metadata.core import Metadata
 from pipeline_training.data_cleaning.clean import Clean
 from pipeline_training.data_extraction.extract import Extract
@@ -37,7 +37,6 @@ from pipeline_training.model_training.train_with_best_hyperparameters import (
 )
 from pipeline_training.utils.common import log_data_splits_summary
 from schema.core import CleanedSchema, RawSchema
-from conf.experiment_tracking.base import Experiment
 
 # pylint: disable=no-member
 
@@ -51,22 +50,7 @@ cfg = Config(
         },
     )
 )
-# import mlflow
 
-# client = mlflow.tracking.MlflowClient(
-#     tracking_uri="http://mlflow:mlflow@34.142.130.3:5005/"
-# )
-# exp_id = client.get_experiment_by_name("thebareops_sgd_study").experiment_id
-# client.delete_experiment(exp_id)
-# client.delete_experiment(exp_id)
-# # client.delete_experiment("3")
-# client.transition_model_version_stage(
-#     name="thebareops_sgd",
-#     version="2",
-#     stage="None",  # Or "Staging", "Archived"
-# )
-
-# time.sleep(100)
 logger = Logger(
     log_file="pipeline_training.log",
     log_root_dir=cfg.dirs.stores.logs,
@@ -431,6 +415,18 @@ compare_test_cases(
 )
 
 # NOTE: evaluate.py
+X_test_transformed = preprocessor.transform(metadata.X_test_original)
+y_test_transformed = label_encoder.transform(metadata.y_test_original)
+compare_test_cases(
+    actual_list=[X_test_transformed, y_test_transformed],
+    expected_list=[X_test, y_test],
+    description_list=[
+        "Confirm that X_test_transformed is the same as X_test",
+        "y_test_transformed is the same as y_test",
+    ],
+    logger=logger,
+)
+
 metadata = predict_on_holdout_set(
     cfg=cfg,
     metadata=metadata,

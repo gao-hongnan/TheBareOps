@@ -1,13 +1,15 @@
 """For more info see my notebooks on model evaluation."""
 
+from typing import Optional
+
+import mlflow
 import numpy as np
 from common_utils.core.logger import Logger
 from sklearn.base import BaseEstimator
-from typing import Optional
+
 from conf.base import Config
 from metadata.core import Metadata
 from pipeline_training.model_training.train import calculate_classification_metrics
-import mlflow
 
 
 # TODO: dump confusion matrix and classification report to image/media.

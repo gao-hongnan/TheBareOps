@@ -53,6 +53,8 @@ class Metadata:
     y_train: pd.DataFrame = None
     y_test: pd.DataFrame = None
     y_val: pd.DataFrame = None
+    X_test_original: pd.DataFrame = None
+    y_test_original: pd.DataFrame = None
 
     # model_training/preprocess.py
     numeric_features: List[str] = None
