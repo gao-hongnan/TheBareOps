@@ -122,9 +122,9 @@ runs:
       with:
         name: check-results
         path: |
-          ./bandit_results.json
-          ./pylint_results.json
-          ./mypy_results.log
-          ./pytest_unit.log
-          ./pytest_integration.log
-          ./pytest_system.log
+          ${{ inputs.working_directory }}/bandit_results.json
+          ${{ inputs.working_directory }}/pylint_results.json
+          ${{ inputs.working_directory }}/mypy_results.log
+          ${{ inputs.working_directory }}/pytest_unit.log
+          ${{ inputs.working_directory }}/pytest_integration.log
+          ${{ inputs.working_directory }}/pytest_system.log
