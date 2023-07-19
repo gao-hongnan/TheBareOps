@@ -1,0 +1,88 @@
+name: "Continuous Integration (CI)"
+description: "DevOps: Run CI checks on pull requests and pushes to main branch."
+inputs:
+  packages_to_check:
+    description: "List of packages to check."
+    required: true
+    default: "pipeline-training"
+runs:
+  using: "composite"
+  steps:
+    - name: Run Bandit Security Check
+      run: |
+        curl -o ci_security_bandit.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_security_bandit.sh
+        chmod +x ci_security_bandit.sh
+        bash ci_security_bandit.sh \
+          --severity-level=low \
+          --format=json \
+          --output=bandit_results.json \
+          ${{ inputs.packages_to_check }}
+      shell: bash
+      if: always()
+    - name: Run Linter Check
+      run: |
+        curl -o ci_linter.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_linter_pylint.sh
+        chmod +x ci_linter.sh
+        bash ci_linter.sh \
+          --rcfile=pyproject.toml \
+          --fail-under=10 \
+          --score=yes \
+          --output-format=json:pylint_results.json,colorized \
+          ${{ inputs.packages_to_check }}
+      shell: bash
+      if: always()
+    - name: Run Formatter Black Check
+      run: |
+        curl -o ci_formatter_black.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_formatter_black.sh
+        chmod +x ci_formatter_black.sh
+        bash ci_formatter_black.sh \
+          --check \
+          --diff \
+          --color \
+          --verbose \
+          ${{ inputs.packages_to_check }}
+      shell: bash
+      if: always()
+    - name: Run Formatter Isort Check
+      run: |
+        curl -o ci_formatter_isort.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_formatter_isort.sh
+        chmod +x ci_formatter_isort.sh
+        bash ci_formatter_isort.sh \
+          --check \
+          --diff \
+          --color \
+          --verbose \
+          ${{ inputs.packages_to_check }}
+      shell: bash
+      if: always()
+    - name: Run MyPy Type Check
+      run: |
+        curl -o ci_typing_mypy.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_typing_mypy.sh
+        chmod +x ci_typing_mypy.sh
+        bash ci_typing_mypy.sh \
+          --config-file=pyproject.toml \
+          ${{ inputs.packages_to_check }} \
+          | tee mypy_results.log
+      shell: bash
+      if: always()
+    - name: Run All Tests
+      run: |
+        curl -o ci_tests_pytest.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_tests_pytest.sh
+        chmod +x ci_tests_pytest.sh
+        bash ci_tests_pytest.sh \
+          --color=yes \
+          --cov-fail-under=10 \
+          --cov-report=term-missing \
+          | tee pytest_results.log
+      shell: bash
+      if: always()
+    - name: Upload Check Results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: check-results
+        path: |
+          ./bandit_results.json
+          ./pylint_results.json
+          ./mypy_results.log
+          ./pytest_results.log

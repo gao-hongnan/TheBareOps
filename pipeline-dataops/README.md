@@ -547,6 +547,6 @@ docker run -it \
   us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:$IMAGE_TAG
 ```
 
-### Continuous Integration and Continuous Delivery
+## Continuous Integration and Continuous Delivery
 
 ...

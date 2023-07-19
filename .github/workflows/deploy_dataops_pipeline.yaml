@@ -8,10 +8,50 @@ on:
     paths-ignore:
       - "**/*.md"
       - "**/.gitignore"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "**/.gitignore"
 
 jobs:
+  continuous-integration:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    env:
+      PACKAGES_TO_CHECK: "pipeline-dataops" # "package1 package2 package3"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Environment setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+          cache: pip
+      - name: Get pip cache directory path
+        id: pip-cache
+        run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT # set-output is deprecated.
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements_dev.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+      - name: Install dev dependencies
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel
+          python3 -m pip install -r pipeline-training/requirements_dev.txt
+      - name: Run Continuous Integration Action
+        uses: ./.github/actions/continuous-integration
+        with:
+          packages_to_check: ${{ env.PACKAGES_TO_CHECK }}
+        continue-on-error: true
   deploy_dataops_pipeline:
     runs-on: ubuntu-latest
+    needs: continuous-integration # need this if not all jobs run in parallel
     env:
       PROJECT_ID: ${{ secrets.PROJECT_ID }}
       GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}

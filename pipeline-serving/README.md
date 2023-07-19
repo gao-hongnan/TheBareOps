@@ -26,3 +26,13 @@ uvicorn api:app --reload
     }
   ]
 }
+
+## CICD
+
+Seems like can depend on?
+
+```
+deploy_model:
+  needs: [train_model]
+  runs-on: ubuntu-latest
+```
