@@ -1,6 +1,19 @@
 # DataOps
 
+## Workflow
+
 Here's the steps involved in our DataOps workflow:
+
+### Staging/Experiment/Development
+
+It starts off with a developer commiting code changes to the repository. This
+will trigger a CI/CD pipeline that do test builds running tests such as:
+
+- Unit tests
+- Integration tests
+- System tests (DAG)
+
+Here are more fine grained details of the whole pipeline.
 
 1. **Data Extraction**
 
@@ -21,6 +34,7 @@ Here's the steps involved in our DataOps workflow:
 
         This structure allows for easy tracking of the data's origin and
         timestamp.
+    - Note at this step data is versioned using `dvc` (my own implemented).
 
 3. **Loading Data to Staging BigQuery**
 
@@ -112,24 +126,67 @@ Here's the steps involved in our DataOps workflow:
     - If the transformed data fails the validation, appropriate steps are taken
       just like after extraction.
 
-Next in the pipeline, once the transformed and validated data in the staging
-layer has been confirmed to be accurate and ready for use, it would then be
-moved to the production layer. This would be handled in the following steps:
+8. **DAG**
 
-1. **Loading Data to Production GCS**
+    - The whole step from 1 to 7 is wrapped in a DAG.
+    - This means you can use things like Airflow to orchestrate the whole
+      process.
+
+After knowing what the pipeline consists of, let's talk about the CI/CD part.
+
+1. **Trigger CI/CD**
+
+    - Once the developer commits code changes to the repository, a CI/CD
+      pipeline is triggered for the dev CI/CD pipeline.
+
+    - This pipeline is responsible for building and testing the code changes.
+        - DevOps
+        - Unit and Integration Tests
+        - System Tests (i.e. test whole DAG gives correct output)
+        - Build Image of the DAG.
+        - Push Image to Artifacts Registry.
+
+2. **Trigger Message to Pub/Sub**
+
+    - Once the transformed data has been validated, a message is sent to
+      Pub/Sub. This message triggers the next step in the pipeline, which is
+      moving the data to the production layer.
+    - Next in the pipeline, once the transformed and validated data in the
+      staging layer has been confirmed to be accurate and ready for use, it
+      would then be moved to the production layer. This would be handled in the
+      following steps:
+
+Note that in our current implementation, after step 1. we straight away deploy
+to "production" by deploying the image of the DAG to GKE using a `CronJob`
+service.
+
+We can also add monitoring for data quality and data drift.
+
+### Production Layer
+
+1. **The Production Deployment Pipeline is Triggered**
+
+    - From previous, a message of success from the development pipeline is sent
+      to Pub/Sub.
+    - The CI/CD pipeline is triggered and the production deployment pipeline
+      starts.
+    - Usually someone will manually approve the deployment to production.
+
+2. **Loading Data to Production GCS**
 
     - The validated and transformed data is moved from the staging GCS to the
       production GCS. This signals that the data is ready for use in downstream
       applications and processes.
+    - Note at this step data is versioned using `dvc` (my own implemented).
 
-2. **Loading Data to Production BigQuery**
+3. **Loading Data to Production BigQuery**
 
     - Similarly, the validated and transformed data in BigQuery is moved from
       the staging dataset to the production dataset. This makes the data
       available for querying, reporting, machine learning model training, and
       other use cases.
 
-3. **Querying Data from Production BigQuery**
+4. **Querying Data from Production BigQuery**
 
     - Finally, data is queried from the production dataset in BigQuery for use
       in various downstream applications, such as training and inference for
@@ -152,6 +209,19 @@ In the context of ML, these steps form the beginning part of our pipeline, where
 data is extracted, cleaned, and made ready for use in our ML models. Each step
 is designed to ensure the integrity and usability of the data, from extraction
 to querying for model training and inference.
+
+### Monitoring
+
+We can add monitoring for data quality and data drift.
+
+### Current Implementation
+
+As a proof of concept, we merged the staging and production layers into one.
+
+### The Full Stack Implementation
+
+We can replace many parts with tech stacks such as Airbyte, dbt and Airflow.
+This will be inside the "TheFullStackOps" repo.
 
 ## Setup Project Structure
 
