@@ -5,15 +5,17 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - "**/*.md"
-      - "**/.gitignore"
+    paths:
+      - "pipeline-dataops/**"
+      - "!pipeline-dataops/**/*.md"
+      - "!pipeline-dataops/**/.gitignore"
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - "**/*.md"
-      - "**/.gitignore"
+    paths:
+      - "pipeline-dataops/**"
+      - "!pipeline-dataops/**/*.md"
+      - "!pipeline-dataops/**/.gitignore"
 
 jobs:
   continuous-integration:
@@ -22,7 +24,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     env:
-      PACKAGES_TO_CHECK: "pipeline-dataops" # "package1 package2 package3"
+      PACKAGES_TO_CHECK: "pipeline_dataops" # "package1 package2 package3"
+      WORKING_DIRECTORY: "pipeline-dataops"
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -48,6 +51,7 @@ jobs:
         uses: ./.github/actions/continuous-integration
         with:
           packages_to_check: ${{ env.PACKAGES_TO_CHECK }}
+          working_directory: ${{ env.WORKING_DIRECTORY }}
         continue-on-error: true
   deploy_dataops_pipeline:
     runs-on: ubuntu-latest

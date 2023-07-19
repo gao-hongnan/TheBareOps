@@ -152,8 +152,14 @@ disallow_untyped_defs = true
 disable_error_code = ['override', 'attr-defined']
 disallow_any_generics = false
 
+# pyproject.toml
 [tool.pytest.ini_options]
-# add any pytest options here, for example:
-# addopts = --verbose --capture=no
-testpaths = "tests"
+minversion = "6.0"
+addopts = "-ra" # -ra -q
+testpaths = [
+    "tests",
+    # "tests/unit",
+    # "tests/integration",
+    # "tests/system",
+]
 filterwarnings = "ignore::DeprecationWarning" # ignore deprecation warnings when running tests

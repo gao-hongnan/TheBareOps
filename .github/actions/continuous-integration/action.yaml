@@ -5,11 +5,16 @@ inputs:
     description: "List of packages to check."
     required: true
     default: "pipeline-training"
+  working_directory:
+    description: "Directory to change to before running checks."
+    required: false
+    default: "."
 runs:
   using: "composite"
   steps:
     - name: Run Bandit Security Check
       run: |
+        cd ${{ inputs.working_directory }} || exit 1
         curl -o ci_security_bandit.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_security_bandit.sh
         chmod +x ci_security_bandit.sh
         bash ci_security_bandit.sh \
@@ -21,6 +26,7 @@ runs:
       if: always()
     - name: Run Linter Check
       run: |
+        cd ${{ inputs.working_directory }} || exit 1
         curl -o ci_linter.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_linter_pylint.sh
         chmod +x ci_linter.sh
         bash ci_linter.sh \
@@ -33,6 +39,7 @@ runs:
       if: always()
     - name: Run Formatter Black Check
       run: |
+        cd ${{ inputs.working_directory }} || exit 1
         curl -o ci_formatter_black.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_formatter_black.sh
         chmod +x ci_formatter_black.sh
         bash ci_formatter_black.sh \
@@ -45,6 +52,7 @@ runs:
       if: always()
     - name: Run Formatter Isort Check
       run: |
+        cd ${{ inputs.working_directory }} || exit 1
         curl -o ci_formatter_isort.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_formatter_isort.sh
         chmod +x ci_formatter_isort.sh
         bash ci_formatter_isort.sh \
@@ -57,6 +65,7 @@ runs:
       if: always()
     - name: Run MyPy Type Check
       run: |
+        cd ${{ inputs.working_directory }} || exit 1
         curl -o ci_typing_mypy.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_typing_mypy.sh
         chmod +x ci_typing_mypy.sh
         bash ci_typing_mypy.sh \
@@ -65,15 +74,46 @@ runs:
           | tee mypy_results.log
       shell: bash
       if: always()
-    - name: Run All Tests
+    - name: Run Unit Tests
       run: |
+        cd ${{ inputs.working_directory }} || exit 1
         curl -o ci_tests_pytest.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_tests_pytest.sh
         chmod +x ci_tests_pytest.sh
         bash ci_tests_pytest.sh \
+          unit \
           --color=yes \
+          --cov=${{ inputs.packages_to_check }} \
           --cov-fail-under=10 \
           --cov-report=term-missing \
-          | tee pytest_results.log
+          | tee pytest_unit.log
+      shell: bash
+      if: always()
+    - name: Run Integration Tests
+      run: |
+        cd ${{ inputs.working_directory }} || exit 1
+        curl -o ci_tests_pytest.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_tests_pytest.sh
+        chmod +x ci_tests_pytest.sh
+        bash ci_tests_pytest.sh \
+          integration \
+          --color=yes \
+          --cov=${{ inputs.packages_to_check }} \
+          --cov-fail-under=10 \
+          --cov-report=term-missing \
+          | tee pytest_integration.log
+      shell: bash
+      if: always()
+    - name: Run System Tests
+      run: |
+        cd ${{ inputs.working_directory }} || exit 1
+        curl -o ci_tests_pytest.sh https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/ci/ci_tests_pytest.sh
+        chmod +x ci_tests_pytest.sh
+        bash ci_tests_pytest.sh \
+          system \
+          --color=yes \
+          --cov=${{ inputs.packages_to_check }} \
+          --cov-fail-under=10 \
+          --cov-report=term-missing \
+          | tee pytest_system.log
       shell: bash
       if: always()
     - name: Upload Check Results
@@ -85,4 +125,6 @@ runs:
           ./bandit_results.json
           ./pylint_results.json
           ./mypy_results.log
-          ./pytest_results.log
+          ./pytest_unit.log
+          ./pytest_integration.log
+          ./pytest_system.log
