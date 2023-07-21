@@ -1,5 +1,7 @@
 # The BareOps
 
+![MLOps](mlops.gif)
+
 This pipeline does not care about model performance, one should realise
 that the feature columns contain full information to predict the target
 because `price_increase` is derived as follows:
