@@ -1,5 +1,8 @@
 # DataOps
 
+See my mlops docs for details, but here is concrete implementation
+so we need this as well for case study.
+
 ## Workflow
 
 Here's the steps involved in our DataOps workflow:

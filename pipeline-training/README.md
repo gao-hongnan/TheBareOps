@@ -1,5 +1,8 @@
 # Training Pipeline
 
+See my mlops docs for details, but here is concrete implementation
+so we need this as well for case study.
+
 ## MLOps (Training Pipeline)
 
 1. **Scheduled Jobs (CronJobs in Kubernetes):** This can be a good option if

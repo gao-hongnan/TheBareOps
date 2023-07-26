@@ -1,5 +1,8 @@
 # Serving Pipeline
 
+See my mlops docs for details, but here is concrete implementation
+so we need this as well for case study.
+
 ## Setup Virtual Environment
 
 ```bash
