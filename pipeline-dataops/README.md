@@ -1,6 +1,7 @@
 # DataOps
 
 - [DataOps](#dataops)
+  - [Pinned Commit](#pinned-commit)
   - [Workflow](#workflow)
     - [Staging/Experiment/Development](#stagingexperimentdevelopment)
     - [Production Layer](#production-layer)
@@ -30,6 +31,14 @@ so we need this as well for case study.
 See gif made by Deepak Bhardwaj for a rough workflow.
 
 ![dataops-deepak-bhardwaj](./assets/dataops-deepak-bhardwaj.gif)
+
+## Pinned Commit
+
+```bash
+commit df62949
+```
+
+is the working commit for this project.
 
 ## Workflow
 
