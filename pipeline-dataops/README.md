@@ -399,6 +399,42 @@ to `gcp-storage-service-account.json`.
 
 We will detail how to build a Docker image locally.
 
+First, I will show you the command to build the Docker image:
+
+```bash
+export GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
+export IMAGE_NAME=pipeline-dataops
+export IMAGE_TAG=$GIT_COMMIT_HASH
+docker build \
+--build-arg GIT_COMMIT_HASH=$GIT_COMMIT_HASH \
+-f Dockerfile \
+-t $IMAGE_NAME:$IMAGE_TAG \
+.
+```
+
+Then, we show how to run the Docker image:
+
+```bash
+export GIT_COMMIT_HASH=$(git rev-parse --short HEAD) && \
+export HOME_DIR=/pipeline-dataops && \
+export IMAGE_NAME=pipeline-dataops && \
+export IMAGE_TAG=$GIT_COMMIT_HASH && \
+export GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=$(base64 -i gcp-storage-service-account.json)
+docker run -it \
+  --rm \
+  --env PROJECT_ID="gao-hongnan" \
+  --env GOOGLE_APPLICATION_CREDENTIALS="${HOME_DIR}/gcp-storage-service-account.json" \
+  --env GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=$GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64 \
+  --env GCS_BUCKET_NAME="gaohn" \
+  --env GCS_BUCKET_PROJECT_NAME="thebareops_production" \
+  --env BIGQUERY_RAW_DATASET=thebareops_production \
+  --env BIGQUERY_RAW_TABLE_NAME=raw_binance_btcusdt_spot \
+  --env BIGQUERY_TRANSFORMED_DATASET=thebareops_production \
+  --env BIGQUERY_TRANSFORMED_TABLE_NAME=processed_binance_btcusdt_spot \
+  --name $IMAGE_NAME \
+  $IMAGE_NAME:$IMAGE_TAG
+```
+
 #### Preparing for the Build
 
 Before initiating the build process, it's important to set specific variables
