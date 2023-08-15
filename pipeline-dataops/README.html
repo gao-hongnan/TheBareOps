@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>DataOps</title>
+        <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css" rel="stylesheet" type="text/css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+        
+    </head>
+    <body class="vscode-body vscode-light">
+        <h1 id="dataops">DataOps</h1>
+<ul>
+<li><a href="#dataops">DataOps</a>
+<ul>
+<li><a href="#workflow">Workflow</a>
+<ul>
+<li><a href="#stagingexperimentdevelopment">Staging/Experiment/Development</a></li>
+<li><a href="#production-layer">Production Layer</a></li>
+<li><a href="#monitoring">Monitoring</a></li>
+<li><a href="#current-implementation">Current Implementation</a></li>
+<li><a href="#the-full-stack-implementation">The Full Stack Implementation</a></li>
+</ul>
+</li>
+<li><a href="#setup-project-structure">Setup Project Structure</a></li>
+<li><a href="#setup-virtual-environment">Setup Virtual Environment</a></li>
+<li><a href="#containerization">Containerization</a>
+<ul>
+<li><a href="#secrets">Secrets</a></li>
+<li><a href="#docker-build">Docker Build</a>
+<ul>
+<li><a href="#preparing-for-the-build">Preparing for the Build</a></li>
+<li><a href="#building-the-image">Building the Image</a></li>
+<li><a href="#platform-specific-building-for-gke">Platform-Specific Building for GKE</a></li>
+</ul>
+</li>
+<li><a href="#docker-run">Docker Run</a>
+<ul>
+<li><a href="#entrypoint">Entrypoint</a></li>
+<li><a href="#run-docker-image-locally">Run Docker Image Locally</a></li>
+</ul>
+</li>
+<li><a href="#push-docker-image-to-artifacts-registry">Push Docker Image to Artifacts Registry</a></li>
+<li><a href="#deploy-docker-image-from-artifacts-registry-to-google-kubernetes-engine">Deploy Docker Image from Artifacts Registry to Google Kubernetes Engine</a></li>
+<li><a href="#pull-and-test-run-locally">Pull and Test Run Locally</a></li>
+</ul>
+</li>
+<li><a href="#continuous-integration-and-continuous-delivery">Continuous Integration and Continuous Delivery</a></li>
+</ul>
+</li>
+</ul>
+<p>See my mlops docs for details, but here is concrete implementation
+so we need this as well for case study.</p>
+<p><img src="file:////Users/gaohn/gaohn/TheBareOps/pipeline-dataops/assets/dataops-deepak-bhardwaj.gif" alt="dataops-deepak-bhardwaj"></p>
+<h2 id="workflow">Workflow</h2>
+<p>Here's the steps involved in our DataOps workflow:</p>
+<h3 id="stagingexperimentdevelopment">Staging/Experiment/Development</h3>
+<p>It starts off with a developer commiting code changes to the repository. This
+will trigger a CI/CD pipeline that do test builds running tests such as:</p>
+<ul>
+<li>Unit tests</li>
+<li>Integration tests</li>
+<li>System tests (DAG)</li>
+</ul>
+<p>Here are more fine grained details of the whole pipeline.</p>
+<ol>
+<li>
+<p><strong>Data Extraction</strong></p>
+<ul>
+<li>Source data is identified and extracted from various internal and external
+databases and APIs.</li>
+</ul>
+</li>
+<li>
+<p><strong>Loading Data to Staging Google Cloud Storage (GCS)</strong></p>
+<ul>
+<li>
+<p>Extracted data is loaded into a dedicated staging area within GCS. This
+process serves as the initial raw data checkpoint, providing an immutable
+storage layer for unprocessed data. This approach to storing raw data
+helps maintain data integrity throughout the pipeline.</p>
+</li>
+<li>
+<p>The data is stored in a structured format, for instance, in the form of:</p>
+<pre><code class="language-text">dataset/table_name/created_at=YYYY-MM-DD:HH:MM:SS:MS`
+</code></pre>
+<p>This structure allows for easy tracking of the data's origin and
+timestamp.</p>
+</li>
+<li>
+<p>Note at this step data is versioned using <code>dvc</code> (my own implemented).</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Loading Data to Staging BigQuery</strong></p>
+<ul>
+<li>The data in the staging GCS is loaded into Google BigQuery for more
+advanced processing and analysis.</li>
+<li>Data is loaded using both write and append modes, allowing for incremental
+refreshes.</li>
+<li>Metadata such as <code>created_at</code> and <code>updated_at</code> timestamps are added to
+maintain a detailed record of the data's lineage.</li>
+<li>As BigQuery's primary key system may have limitations, one needs to be
+careful to ensure that there are no <strong>duplicate</strong> records in the data.</li>
+</ul>
+</li>
+<li>
+<p><strong>Data Validation After Extraction</strong></p>
+<ul>
+<li>Once the data is extracted and loaded into the staging area in GCS or
+BigQuery, a preliminary data validation process is conducted.</li>
+<li>This may include checking for the presence and correctness of key fields,
+ensuring the right data types, checking data ranges, verifying data
+integrity, and so on.</li>
+<li>If the data fails the validation, appropriate error handling procedures
+should be implemented. This may include logging the error, sending an
+alert, or even stopping the pipeline based on the severity of the issue.</li>
+</ul>
+</li>
+<li>
+<p><strong>Data Transformation</strong></p>
+<ul>
+<li>
+<p>In this step, the raw data from the staging area undergoes a series of
+transformation processes to be refined into a format suitable for
+downstream use cases, including analysis and machine learning model
+training. These transformations might involve operations such as:</p>
+<ul>
+<li>
+<p><strong>Data Cleaning</strong>: Identifying and correcting (or removing) errors and
+inconsistencies in the data. This might include handling missing
+values, eliminating duplicates, and dealing with outliers.</p>
+</li>
+<li>
+<p><strong>Joining Data</strong>: Combining related data from different sources or
+tables to create a cohesive, unified dataset.</p>
+</li>
+<li>
+<p><strong>Aggregating Data</strong>: Grouping data by certain variables and
+calculating aggregate measures (such as sums, averages, maximum or
+minimum values) over each group.</p>
+</li>
+<li>
+<p><strong>Structuring Data</strong>: Formatting and organizing the data in a way
+that's appropriate for the intended use cases. This might involve
+creating certain derived variables, transforming data types, or
+reshaping the data structure.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>It's important to note that the transformed data at this stage is intended
+to be a high-quality, flexible data resource that can be leveraged across
+a range of downstream use cases - not just for machine learning model
+training and inference. For example, it might also be used for business
+reporting, exploratory data analysis, or statistical studies.</p>
+</li>
+<li>
+<p>By maintaining a general-purpose transformed data layer, the pipeline
+ensures that a broad array of users and applications can benefit from the
+data cleaning and transformation efforts, enhancing overall data usability
+and efficiency within the organization.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Load Transformed Data to Staging GCS and BigQuery</strong></p>
+<ul>
+<li>
+<p>After the data transformation and validation, the resulting data is loaded
+back into the staging environment. This involves both Google Cloud Storage
+(GCS) and BigQuery.</p>
+<ul>
+<li>
+<p><strong>Staging GCS</strong>: The transformed data is saved back into a specific
+location in the staging GCS. This provides a backup of the transformed
+data and serves as an intermediate checkpoint before moving the data
+to the production layer.</p>
+</li>
+<li>
+<p><strong>Staging BigQuery</strong>: The transformed data is also loaded into a
+specific table in the staging area in BigQuery. Loading the
+transformed data into BigQuery allows for quick and easy analysis and
+validation of the transformed data, thanks to BigQuery's capabilities
+for handling large-scale data and performing fast SQL-like queries.</p>
+</li>
+</ul>
+</li>
+<li>
+<p>This step of loading the transformed data back into the staging GCS and
+BigQuery is crucial for maintaining a robust and reliable data pipeline.
+It ensures that the transformed data is correctly saved and accessible for
+future steps, and it allows for any necessary checks or reviews to be
+performed before the data is moved to the production environment.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Data Validation After Transformation</strong></p>
+<ul>
+<li>After the data transformation process, another round of validation is
+carried out on the transformed data.</li>
+<li>This may involve checking the output of the transformation against
+expected results, ensuring the data structure conforms to the target
+schema, and performing statistical checks (e.g., distributions,
+correlations, etc.).</li>
+<li>If the transformed data fails the validation, appropriate steps are taken
+just like after extraction.</li>
+</ul>
+</li>
+<li>
+<p><strong>DAG</strong></p>
+<ul>
+<li>The whole step from 1 to 7 is wrapped in a DAG.</li>
+<li>This means you can use things like Airflow to orchestrate the whole
+process.</li>
+</ul>
+</li>
+</ol>
+<p>After knowing what the pipeline consists of, let's talk about the CI/CD part.</p>
+<ol>
+<li>
+<p><strong>Trigger CI/CD</strong></p>
+<ul>
+<li>
+<p>Once the developer commits code changes to the repository, a CI/CD
+pipeline is triggered for the dev CI/CD pipeline.</p>
+</li>
+<li>
+<p>This pipeline is responsible for building and testing the code changes.</p>
+<ul>
+<li>DevOps</li>
+<li>Unit and Integration Tests</li>
+<li>System Tests (i.e. test whole DAG gives correct output)</li>
+<li>Build Image of the DAG.</li>
+<li>Push Image to Artifacts Registry.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Trigger Message to Pub/Sub</strong></p>
+<ul>
+<li>Once the transformed data has been validated, a message is sent to
+Pub/Sub. This message triggers the next step in the pipeline, which is
+moving the data to the production layer.</li>
+<li>Next in the pipeline, once the transformed and validated data in the
+staging layer has been confirmed to be accurate and ready for use, it
+would then be moved to the production layer. This would be handled in the
+following steps:</li>
+</ul>
+</li>
+</ol>
+<p>Note that in our current implementation, after step 1. we straight away deploy
+to &quot;production&quot; by deploying the image of the DAG to GKE using a <code>CronJob</code>
+service.</p>
+<p>We can also add monitoring for data quality and data drift.</p>
+<h3 id="production-layer">Production Layer</h3>
+<ol>
+<li>
+<p><strong>The Production Deployment Pipeline is Triggered</strong></p>
+<ul>
+<li>From previous, a message of success from the development pipeline is sent
+to Pub/Sub.</li>
+<li>The CI/CD pipeline is triggered and the production deployment pipeline
+starts.</li>
+<li>Usually someone will manually approve the deployment to production.</li>
+</ul>
+</li>
+<li>
+<p><strong>Loading Data to Production GCS</strong></p>
+<ul>
+<li>The validated and transformed data is moved from the staging GCS to the
+production GCS. This signals that the data is ready for use in downstream
+applications and processes.</li>
+<li>Note at this step data is versioned using <code>dvc</code> (my own implemented).</li>
+</ul>
+</li>
+<li>
+<p><strong>Loading Data to Production BigQuery</strong></p>
+<ul>
+<li>Similarly, the validated and transformed data in BigQuery is moved from
+the staging dataset to the production dataset. This makes the data
+available for querying, reporting, machine learning model training, and
+other use cases.</li>
+</ul>
+</li>
+<li>
+<p><strong>Querying Data from Production BigQuery</strong></p>
+<ul>
+<li>Finally, data is queried from the production dataset in BigQuery for use
+in various downstream applications, such as training and inference for
+machine learning models, data analysis, reporting, and more.</li>
+</ul>
+</li>
+</ol>
+<p>Typically, the movement of data from the staging layer to the production layer
+happens once the data has been cleaned, transformed, validated, and is deemed
+ready for use in downstream applications such as machine learning model
+training, analytics, reporting, etc. The transformed data is first validated to
+ensure that it meets the required quality standards. If the validation is
+successful, the data is moved to the production layer. The goal is to only
+expose clean, validated, and reliable data to end users or downstream
+applications.</p>
+<p>Once the data has passed both rounds of validation, it can be loaded into the
+production layer in both GCS and BigQuery. At this point, the data is ready for
+downstream use in tasks such as model training and inference.</p>
+<p>In the context of ML, these steps form the beginning part of our pipeline, where
+data is extracted, cleaned, and made ready for use in our ML models. Each step
+is designed to ensure the integrity and usability of the data, from extraction
+to querying for model training and inference.</p>
+<h3 id="monitoring">Monitoring</h3>
+<p>We can add monitoring for data quality and data drift.</p>
+<h3 id="current-implementation">Current Implementation</h3>
+<p>As a proof of concept, we merged the staging and production layers into one.</p>
+<h3 id="the-full-stack-implementation">The Full Stack Implementation</h3>
+<p>We can replace many parts with tech stacks such as Airbyte, dbt and Airflow.
+This will be inside the &quot;TheFullStackOps&quot; repo.</p>
+<h2 id="setup-project-structure">Setup Project Structure</h2>
+<pre><code class="language-bash"><span class="hljs-meta">#!/bin/bash</span>
+
+<span class="hljs-function"><span class="hljs-title">create_files</span></span>() {
+    <span class="hljs-built_in">touch</span> .dockerignore \
+          .<span class="hljs-built_in">env</span> \
+          .gitignore \
+          Dockerfile \
+          Makefile \
+          README.md \
+          pipeline.py \
+          pyproject.toml \
+          requirements.txt \
+          requirements_dev.txt
+}
+
+<span class="hljs-function"><span class="hljs-title">create_conf_directories</span></span>() {
+    <span class="hljs-built_in">mkdir</span> conf
+    <span class="hljs-built_in">touch</span> conf/__init__.py conf/base.py
+
+    <span class="hljs-keyword">for</span> <span class="hljs-built_in">dir</span> <span class="hljs-keyword">in</span> directory environment extract general load logger transform
+    <span class="hljs-keyword">do</span>
+        <span class="hljs-built_in">mkdir</span> conf/<span class="hljs-variable">$dir</span>
+        <span class="hljs-built_in">touch</span> conf/<span class="hljs-variable">$dir</span>/__init__.py conf/<span class="hljs-variable">$dir</span>/base.py
+    <span class="hljs-keyword">done</span>
+}
+
+<span class="hljs-function"><span class="hljs-title">create_metadata_directory</span></span>() {
+    <span class="hljs-built_in">mkdir</span> metadata
+    <span class="hljs-built_in">touch</span> metadata/__init__.py metadata/core.py
+}
+
+<span class="hljs-function"><span class="hljs-title">create_pipeline_dataops_directories</span></span>() {
+    <span class="hljs-built_in">mkdir</span> pipeline_dataops
+    <span class="hljs-built_in">touch</span> pipeline_dataops/__init__.py
+
+    <span class="hljs-keyword">for</span> <span class="hljs-built_in">dir</span> <span class="hljs-keyword">in</span> extract load transform validate
+    <span class="hljs-keyword">do</span>
+        <span class="hljs-built_in">mkdir</span> pipeline_dataops/<span class="hljs-variable">$dir</span>
+        <span class="hljs-built_in">touch</span> pipeline_dataops/<span class="hljs-variable">$dir</span>/__init__.py pipeline_dataops/<span class="hljs-variable">$dir</span>/core.py
+    <span class="hljs-keyword">done</span>
+}
+
+<span class="hljs-function"><span class="hljs-title">create_schema_directory</span></span>() {
+    <span class="hljs-built_in">mkdir</span> schema
+    <span class="hljs-built_in">touch</span> schema/__init__.py schema/base.py schema/core.py
+}
+
+<span class="hljs-function"><span class="hljs-title">create_scripts_directories</span></span>() {
+    <span class="hljs-built_in">mkdir</span> -p scripts/docker
+    <span class="hljs-built_in">touch</span> scripts/docker/entrypoint.sh
+
+    <span class="hljs-built_in">mkdir</span> -p scripts/k8s/dataops/config_maps scripts/k8s/dataops/manifests
+}
+
+<span class="hljs-function"><span class="hljs-title">create_tests_directories</span></span>() {
+    <span class="hljs-built_in">mkdir</span> tests
+    <span class="hljs-built_in">touch</span> tests/conftest.py
+
+    <span class="hljs-keyword">for</span> <span class="hljs-built_in">dir</span> <span class="hljs-keyword">in</span> integration system unit
+    <span class="hljs-keyword">do</span>
+        <span class="hljs-built_in">mkdir</span> tests/<span class="hljs-variable">$dir</span>
+        <span class="hljs-keyword">if</span> [ <span class="hljs-string">&quot;<span class="hljs-variable">$dir</span>&quot;</span> != <span class="hljs-string">&quot;system&quot;</span> ]; <span class="hljs-keyword">then</span>
+            <span class="hljs-keyword">for</span> subdir <span class="hljs-keyword">in</span> extract load transform
+            <span class="hljs-keyword">do</span>
+                <span class="hljs-built_in">mkdir</span> tests/<span class="hljs-variable">$dir</span>/<span class="hljs-variable">$subdir</span>
+                <span class="hljs-built_in">touch</span> tests/<span class="hljs-variable">$dir</span>/<span class="hljs-variable">$subdir</span>/test_<span class="hljs-variable">${subdir}</span>.py
+            <span class="hljs-keyword">done</span>
+        <span class="hljs-keyword">else</span>
+            <span class="hljs-built_in">touch</span> tests/<span class="hljs-variable">$dir</span>/test_pipeline.py
+        <span class="hljs-keyword">fi</span>
+    <span class="hljs-keyword">done</span>
+}
+
+<span class="hljs-function"><span class="hljs-title">main</span></span>() {
+    create_files
+    create_conf_directories
+    create_metadata_directory
+    create_pipeline_dataops_directories
+    create_schema_directory
+    create_scripts_directories
+    create_tests_directories
+}
+
+main
+</code></pre>
+<h2 id="setup-virtual-environment">Setup Virtual Environment</h2>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> pipeline-dataops &amp;&amp; \
+curl -o make_venv.sh \
+  https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/make_venv.sh &amp;&amp; \
+bash make_venv.sh venv --pyproject --dev &amp;&amp; \
+<span class="hljs-built_in">rm</span> make_venv.sh &amp;&amp; \
+<span class="hljs-built_in">source</span> venv/bin/activate
+</code></pre>
+<h2 id="containerization">Containerization</h2>
+<h3 id="secrets">Secrets</h3>
+<p>Handling sensitive information, such as service account credentials, in a secure
+manner is crucial for maintaining the integrity and security of our applications
+and data. In this section, we outline a method for securely handling such
+secrets using base64 encoding and a secure storage location.</p>
+<pre><code class="language-bash"><span class="hljs-built_in">base64</span> -i ~/gcp-storage-service-account.json -o gcp-storage-service-account.txt
+</code></pre>
+<p>Here's a step-by-step breakdown of what is happening:</p>
+<ol>
+<li>
+<p>The <code>base64</code> command is encoding the <code>gcp-storage-service-account.json</code> file
+in base64 format. This encoding helps to ensure that the file data remains
+intact without modification during transport.</p>
+</li>
+<li>
+<p>The output is redirected to <code>gcp-storage-service-account.txt</code> using the <code>-o</code>
+option.</p>
+</li>
+<li>
+<p>This base64 string is then manually copied and pasted into either Github
+secrets or Kubernetes secrets, depending on where you are deploying your
+application.</p>
+</li>
+</ol>
+<p>Once you've added the secret to Github or Kubernetes, you can use it in your
+workflows or manifests, respectively. These secrets will be masked and only
+exposed to the processes that require them.</p>
+<p>When the secret is required by your application, you'll need to decode it back
+into its original form. For example, in a bash script, you might use the
+following command:</p>
+<pre><code class="language-bash"><span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;<span class="hljs-variable">$YOUR_SECRET</span>&quot;</span> | <span class="hljs-built_in">base64</span> --decode &gt; gcp-storage-service-account.json
+</code></pre>
+<p>In this command, <code>YOUR_SECRET</code> would be the environment variable where your
+base64 encoded secret is stored. This command decodes the secret and writes it
+to <code>gcp-storage-service-account.json</code>.</p>
+<h3 id="docker-build">Docker Build</h3>
+<p>We will detail how to build a Docker image locally.</p>
+<h4 id="preparing-for-the-build">Preparing for the Build</h4>
+<p>Before initiating the build process, it's important to set specific variables
+which are used during the build process:</p>
+<ul>
+<li>
+<p><code>GIT_COMMIT_HASH</code>: This is the Git commit hash of the current HEAD. It
+uniquely identifies the state of the codebase at the time of the build.</p>
+</li>
+<li>
+<p><code>IMAGE_NAME</code>: This is the name you want to give to the Docker image. Here,
+we're using the name &quot;pipeline-dataops&quot;.</p>
+</li>
+<li>
+<p><code>IMAGE_TAG</code>: This is the tag for the Docker image. In this case, we're using
+the Git commit hash as the tag.</p>
+</li>
+</ul>
+<p>We use the following commands to set these variables:</p>
+<pre><code class="language-bash"><span class="hljs-built_in">export</span> GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
+<span class="hljs-built_in">export</span> IMAGE_NAME=pipeline-dataops
+<span class="hljs-built_in">export</span> IMAGE_TAG=<span class="hljs-variable">$GIT_COMMIT_HASH</span>
+</code></pre>
+<h4 id="building-the-image">Building the Image</h4>
+<p>The <code>docker build</code> command is used to build a Docker image from a Dockerfile and
+a &quot;context&quot;. The context is the set of files located in the specified PATH or
+URL. In this case, the context is the current directory (represented by &quot;.&quot;).</p>
+<p>Here's the command to build the image:</p>
+<pre><code class="language-bash">docker build \
+--build-arg GIT_COMMIT_HASH=<span class="hljs-variable">$GIT_COMMIT_HASH</span> \
+-f Dockerfile \
+-t <span class="hljs-variable">$IMAGE_NAME</span>:<span class="hljs-variable">$IMAGE_TAG</span> \
+.
+</code></pre>
+<p>This command instructs Docker to:</p>
+<ul>
+<li>Use the Dockerfile in the current directory (<code>-f Dockerfile</code>).</li>
+<li>Name and tag the resulting image according to the <code>IMAGE_NAME</code> and
+<code>IMAGE_TAG</code> variables (<code>-t $IMAGE_NAME:$IMAGE_TAG</code>).</li>
+<li>Set the build argument <code>GIT_COMMIT_HASH</code> to the value of the
+<code>GIT_COMMIT_HASH</code> environment variable
+(<code>--build-arg GIT_COMMIT_HASH=$GIT_COMMIT_HASH</code>).</li>
+</ul>
+<h4 id="platform-specific-building-for-gke">Platform-Specific Building for GKE</h4>
+<p>If you're developing on an Apple M1 Mac and plan to deploy the Docker image to
+Google Kubernetes Engine (GKE), it's crucial to specify the
+<code>--platform linux/amd64</code> flag during the build process. This is because the M1
+Mac uses an ARM64 architecture, which differs from the x86_64 (or <code>linux/amd64</code>)
+architecture that GKE typically runs on.</p>
+<p>When a Docker image is built without specifying the target platform, it defaults
+to the architecture of the build machine - ARM64 in the case of the M1 Mac.
+However, trying to run an ARM64-built Docker image on GKE, which uses the
+<code>linux/amd64</code> architecture, may result in a
+<a href="https://stackoverflow.com/questions/42494853/standard-init-linux-go178-exec-user-process-caused-exec-format-error"><strong>compatibility error</strong></a>.</p>
+<p>To ensure your Docker image built on an M1 Mac is compatible with GKE, include
+the <code>--platform linux/amd64</code> flag in your <code>docker build</code> command as follows:</p>
+<pre><code class="language-bash">docker build \
+--build-arg GIT_COMMIT_HASH=<span class="hljs-variable">$GIT_COMMIT_HASH</span> \
+--platform linux/amd64 \
+-f Dockerfile \
+-t <span class="hljs-variable">$IMAGE_NAME</span>:<span class="hljs-variable">$IMAGE_TAG</span> \
+.
+</code></pre>
+<p>This step ensures that the image built is explicitly compatible with the
+<code>linux/amd64</code> platform, circumventing potential compatibility issues when
+deploying to GKE.</p>
+<p>However, we typically build the image via a CI/CD pipeline, for instance, in a
+Github Actions workflow. In this case, the architecture of the runner provided
+by Github Actions is <code>linux/amd64</code>, which is compatible with GKE. This means
+that the <code>--platform</code> flag isn't necessary when building the Docker image within
+this CI/CD context.</p>
+<h3 id="docker-run">Docker Run</h3>
+<h4 id="entrypoint">Entrypoint</h4>
+<p>An entrypoint script, typically written in Bash or Shell, is used in Docker to
+prepare an environment for running your application and then actually start your
+application. The script will be executed when the Docker container is started,
+and it's the last thing that happens before your application's process starts.</p>
+<p>Entrypoint scripts are powerful tools because they allow you to perform
+operations that cannot be done in the Dockerfile, such as using environment
+variables that are only available at runtime, executing commands that depend on
+the state of the running container, or making last minute changes based on the
+user's input when starting the container.</p>
+<p>Here's a breakdown of the script you provided:</p>
+<ol>
+<li>
+<p><code>#!/bin/sh</code>: This line is known as a shebang, and it specifies which
+interpreter should be used to run the script. In this case, it specifies the
+Bourne shell.</p>
+</li>
+<li>
+<p>The script then checks if the file specified by the
+<code>GOOGLE_APPLICATION_CREDENTIALS</code> environment variable contains valid JSON. If
+the file does not contain valid JSON, the script assumes that the
+<code>GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64</code> environment variable contains a
+base64-encoded representation of the file, so it decodes it and writes the
+contents to the file specified by <code>GOOGLE_APPLICATION_CREDENTIALS</code>.</p>
+</li>
+<li>
+<p>Finally, the script executes your application by running
+<code>python pipeline_dev.py</code>.</p>
+</li>
+</ol>
+<p>It's crucial to note a few important points regarding this script:</p>
+<ul>
+<li>
+<p>You need to ensure that the <code>GOOGLE_APPLICATION_CREDENTIALS</code> and
+<code>GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64</code> environment variables are set
+before running the Docker container. You can do this using the <code>-e</code> or
+<code>--env</code> options in the <code>docker run</code> command, or by including the variables
+in an environment file that you pass to Docker using the <code>--env-file</code>
+option. If these variables are not set or are set incorrectly, the script
+might fail or behave unexpectedly.</p>
+</li>
+<li>
+<p>You also need to ensure that the <code>GOOGLE_APPLICATION_CREDENTIALS</code>
+environment variable specifies a valid path in the Docker container's file
+system. This file does not need to exist when the Docker container is
+started (since the script will create it), but the directory part of the
+path must exist. You might need to create the directory in your Dockerfile
+using the <code>RUN mkdir -p &lt;dir&gt;</code> command.</p>
+<p>For instance, if you specify
+<code>--env GOOGLE_APPLICATION_CREDENTIALS=&quot;/pipeline-training/gcp-storage-service-account.json&quot;</code>
+then you need to ensure that the <code>/pipeline-training</code> directory exists in
+the Docker container's file system.</p>
+<p>For me I specify <code>HOME_DIR</code> as <code>/pipeline-training</code> and subsequently define
+<code>GOOGLE_APPLICATION_CREDENTIALS</code> as
+<code>${HOME_DIR}/gcp-storage-service-account.json</code> which is a valid path in the
+Docker container's file system.</p>
+</li>
+<li>
+<p>Lastly, it's important to note that the <code>exec</code> command is used to start your
+application. This replaces the current process (i.e., the shell running the
+entrypoint script) with your application's process. This is usually a good
+thing because it allows your application to receive signals sent to the
+Docker container (such as SIGTERM when Docker wants to stop the container),
+but it also means that no commands in the script after the <code>exec</code> command
+will be executed. Therefore, any cleanup or finalization code that you want
+to run when the application exits must be handled by the application itself,
+not the entrypoint script.</p>
+</li>
+</ul>
+<h4 id="run-docker-image-locally">Run Docker Image Locally</h4>
+<p>Assuming your <code>gcp-storage-service-account.json</code> file is in the current
+directory, you can run the Docker image locally using the following command:</p>
+<pre><code class="language-bash"><span class="hljs-built_in">export</span> GIT_COMMIT_HASH=$(git rev-parse --short HEAD) &amp;&amp; \
+<span class="hljs-built_in">export</span> HOME_DIR=/pipeline-dataops &amp;&amp; \
+<span class="hljs-built_in">export</span> IMAGE_NAME=pipeline-dataops &amp;&amp; \
+<span class="hljs-built_in">export</span> IMAGE_TAG=<span class="hljs-variable">$GIT_COMMIT_HASH</span> &amp;&amp; \
+<span class="hljs-built_in">export</span> GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=$(<span class="hljs-built_in">base64</span> -i gcp-storage-service-account.json)
+docker run -it \
+  --<span class="hljs-built_in">rm</span> \
+  --<span class="hljs-built_in">env</span> PROJECT_ID=<span class="hljs-string">&quot;gao-hongnan&quot;</span> \
+  --<span class="hljs-built_in">env</span> GOOGLE_APPLICATION_CREDENTIALS=<span class="hljs-string">&quot;<span class="hljs-variable">${HOME_DIR}</span>/gcp-storage-service-account.json&quot;</span> \
+  --<span class="hljs-built_in">env</span> GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=<span class="hljs-variable">$GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64</span> \
+  --<span class="hljs-built_in">env</span> GCS_BUCKET_NAME=<span class="hljs-string">&quot;gaohn&quot;</span> \
+  --<span class="hljs-built_in">env</span> GCS_BUCKET_PROJECT_NAME=<span class="hljs-string">&quot;thebareops_production&quot;</span> \
+  --<span class="hljs-built_in">env</span> BIGQUERY_RAW_DATASET=thebareops_production \
+  --<span class="hljs-built_in">env</span> BIGQUERY_RAW_TABLE_NAME=raw_binance_btcusdt_spot \
+  --<span class="hljs-built_in">env</span> BIGQUERY_TRANSFORMED_DATASET=thebareops_production \
+  --<span class="hljs-built_in">env</span> BIGQUERY_TRANSFORMED_TABLE_NAME=processed_binance_btcusdt_spot \
+  --name <span class="hljs-variable">$IMAGE_NAME</span> \
+  <span class="hljs-variable">$IMAGE_NAME</span>:<span class="hljs-variable">$IMAGE_TAG</span>
+</code></pre>
+<p>And remember to pass <code>--build-arg HOME_DIR=YOUR_HOME_DIR</code> to <code>docker build</code> if
+you want to use a different home directory.</p>
+<h3 id="push-docker-image-to-artifacts-registry">Push Docker Image to Artifacts Registry</h3>
+<p>Check <code>gar_docker_setup</code> in my <code>common-utils</code> on how to set up a container
+registry in GCP.</p>
+<p>First build the image again since we need it to be in <code>linux/amd64</code> format.</p>
+<pre><code class="language-bash"><span class="hljs-built_in">export</span> GIT_COMMIT_HASH=$(git rev-parse --short HEAD) &amp;&amp; \
+<span class="hljs-built_in">export</span> PROJECT_ID=<span class="hljs-string">&quot;gao-hongnan&quot;</span> &amp;&amp; \
+<span class="hljs-built_in">export</span> REPO_NAME=<span class="hljs-string">&quot;XXX&quot;</span> &amp;&amp; \
+<span class="hljs-built_in">export</span> APP_NAME=<span class="hljs-string">&quot;XXX&quot;</span> &amp;&amp; \
+<span class="hljs-built_in">export</span> REGION=<span class="hljs-string">&quot;XXX&quot;</span> &amp;&amp; \
+docker build \
+--build-arg GIT_COMMIT_HASH=<span class="hljs-variable">$GIT_COMMIT_HASH</span> \
+-f pipeline-training/Dockerfile \
+--platform=linux/amd64 \
+-t <span class="hljs-string">&quot;<span class="hljs-variable">${REGION}</span>-docker.pkg.dev/<span class="hljs-variable">${PROJECT_ID}</span>/<span class="hljs-variable">${REPO_NAME}</span>/<span class="hljs-variable">${APP_NAME}</span>:<span class="hljs-variable">${GIT_COMMIT_HASH}</span>&quot;</span> \
+.
+</code></pre>
+<p>Then push the image to the container registry.</p>
+<pre><code class="language-bash">docker push <span class="hljs-string">&quot;<span class="hljs-variable">${REGION}</span>-docker.pkg.dev/<span class="hljs-variable">${PROJECT_ID}</span>/<span class="hljs-variable">${REPO_NAME}</span>/<span class="hljs-variable">${APP_NAME}</span>:<span class="hljs-variable">${GIT_COMMIT_HASH}</span>&quot;</span> &amp;&amp; \
+<span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;Successfully pushed <span class="hljs-variable">${REGION}</span>-docker.pkg.dev/<span class="hljs-variable">${PROJECT_ID}</span>/<span class="hljs-variable">${REPO_NAME}</span>/<span class="hljs-variable">${APP_NAME}</span>:<span class="hljs-variable">${GIT_COMMIT_HASH}</span>&quot;</span>
+</code></pre>
+<h3 id="deploy-docker-image-from-artifacts-registry-to-google-kubernetes-engine">Deploy Docker Image from Artifacts Registry to Google Kubernetes Engine</h3>
+<p>Note you do not need to provide the <code>GIT_COMMIT_HASH</code> as the image is already
+tagged with the <code>GIT_COMMIT_HASH</code>.</p>
+<ul>
+<li>Set up <code>Expose</code> to false since this is not a web app.</li>
+</ul>
+<h3 id="pull-and-test-run-locally">Pull and Test Run Locally</h3>
+<p>After you push the image to the container registry, you can pull the image and
+run it locally to test.</p>
+<pre><code class="language-bash"><span class="hljs-built_in">export</span> GIT_COMMIT_HASH=$(git rev-parse HEAD) &amp;&amp; \
+docker pull \
+    us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:<span class="hljs-variable">$GIT_COMMIT_HASH</span>
+</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> pipeline-dataops &amp;&amp; \
+<span class="hljs-built_in">export</span> GIT_COMMIT_HASH=$(git rev-parse HEAD) &amp;&amp; \
+<span class="hljs-built_in">export</span> HOME_DIR=/pipeline-dataops &amp;&amp; \
+<span class="hljs-built_in">export</span> IMAGE_NAME=pipeline-dataops &amp;&amp; \
+<span class="hljs-built_in">export</span> IMAGE_TAG=<span class="hljs-variable">$GIT_COMMIT_HASH</span> &amp;&amp; \
+<span class="hljs-built_in">export</span> GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=$(<span class="hljs-built_in">base64</span> -i gcp-storage-service-account.json)
+docker run -it \
+  --<span class="hljs-built_in">rm</span> \
+  --<span class="hljs-built_in">env</span> PROJECT_ID=<span class="hljs-string">&quot;gao-hongnan&quot;</span> \
+  --<span class="hljs-built_in">env</span> GOOGLE_APPLICATION_CREDENTIALS=<span class="hljs-string">&quot;<span class="hljs-variable">${HOME_DIR}</span>/gcp-storage-service-account.json&quot;</span> \
+  --<span class="hljs-built_in">env</span> GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64=<span class="hljs-variable">$GOOGLE_APPLICATION_CREDENTIALS_JSON_BASE64</span> \
+  --<span class="hljs-built_in">env</span> GCS_BUCKET_NAME=<span class="hljs-string">&quot;gaohn&quot;</span> \
+  --<span class="hljs-built_in">env</span> GCS_BUCKET_PROJECT_NAME=<span class="hljs-string">&quot;thebareops_production&quot;</span> \
+  --<span class="hljs-built_in">env</span> BIGQUERY_RAW_DATASET=thebareops_production \
+  --<span class="hljs-built_in">env</span> BIGQUERY_RAW_TABLE_NAME=raw_binance_btcusdt_spot \
+  --<span class="hljs-built_in">env</span> BIGQUERY_TRANSFORMED_DATASET=thebareops_production \
+  --<span class="hljs-built_in">env</span> BIGQUERY_TRANSFORMED_TABLE_NAME=processed_binance_btcusdt_spot \
+  --name <span class="hljs-variable">$IMAGE_NAME</span> \
+  us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:<span class="hljs-variable">$IMAGE_TAG</span>
+</code></pre>
+<h2 id="continuous-integration-and-continuous-delivery">Continuous Integration and Continuous Delivery</h2>
+<p>...</p>
+
+        <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
+        
+    </body>
+    </html>

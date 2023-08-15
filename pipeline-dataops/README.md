@@ -1,7 +1,34 @@
 # DataOps
 
+- [DataOps](#dataops)
+  - [Workflow](#workflow)
+    - [Staging/Experiment/Development](#stagingexperimentdevelopment)
+    - [Production Layer](#production-layer)
+    - [Monitoring](#monitoring)
+    - [Current Implementation](#current-implementation)
+    - [The Full Stack Implementation](#the-full-stack-implementation)
+  - [Setup Project Structure](#setup-project-structure)
+  - [Setup Virtual Environment](#setup-virtual-environment)
+  - [Containerization](#containerization)
+    - [Secrets](#secrets)
+    - [Docker Build](#docker-build)
+      - [Preparing for the Build](#preparing-for-the-build)
+      - [Building the Image](#building-the-image)
+      - [Platform-Specific Building for GKE](#platform-specific-building-for-gke)
+    - [Docker Run](#docker-run)
+      - [Entrypoint](#entrypoint)
+      - [Run Docker Image Locally](#run-docker-image-locally)
+    - [Push Docker Image to Artifacts Registry](#push-docker-image-to-artifacts-registry)
+    - [Deploy Docker Image from Artifacts Registry to Google Kubernetes Engine](#deploy-docker-image-from-artifacts-registry-to-google-kubernetes-engine)
+    - [Pull and Test Run Locally](#pull-and-test-run-locally)
+  - [Continuous Integration and Continuous Delivery](#continuous-integration-and-continuous-delivery)
+
 See my mlops docs for details, but here is concrete implementation
 so we need this as well for case study.
+
+See gif made by Deepak Bhardwaj for a rough workflow.
+
+![dataops-deepak-bhardwaj](./assets/dataops-deepak-bhardwaj.gif)
 
 ## Workflow
 
