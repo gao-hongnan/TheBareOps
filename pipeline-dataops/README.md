@@ -399,6 +399,8 @@ to `gcp-storage-service-account.json`.
 
 We will detail how to build a Docker image locally.
 
+The commands below should be run from `~/<USER>/TheBareOps/pipeline-dataops/`.
+
 First, I will show you the command to build the Docker image:
 
 ```bash
