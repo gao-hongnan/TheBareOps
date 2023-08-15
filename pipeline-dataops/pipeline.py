@@ -26,6 +26,8 @@ from schema.core import RawSchema, TransformedSchema
 # 1. Not clean enough because I handle too much logic in the class below.
 # 2. If you run elt and fail at transform, the next time you run it, it will
 #    have a gap. Try to purposely fail at transform and see what happens.
+
+
 class Pipeline:
     """Pipeline class that handles the entire ELT process."""
 

@@ -21,6 +21,7 @@
     - [Push Docker Image to Artifacts Registry](#push-docker-image-to-artifacts-registry)
     - [Deploy Docker Image from Artifacts Registry to Google Kubernetes Engine](#deploy-docker-image-from-artifacts-registry-to-google-kubernetes-engine)
     - [Pull and Test Run Locally](#pull-and-test-run-locally)
+  - [Kubernetes](#kubernetes)
   - [Continuous Integration and Continuous Delivery](#continuous-integration-and-continuous-delivery)
 
 See my mlops docs for details, but here is concrete implementation
@@ -254,6 +255,10 @@ We can replace many parts with tech stacks such as Airbyte, dbt and Airflow.
 This will be inside the "TheFullStackOps" repo.
 
 ## Setup Project Structure
+
+```tree
+tree -I 'venv|pipeline_dataops.egg-info|.git|.pytest_cache|tmp.*|__pycache__|__init__.py' -L 3 -a
+```
 
 ```bash
 #!/bin/bash
@@ -684,6 +689,10 @@ docker run -it \
   --name $IMAGE_NAME \
   us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:$IMAGE_TAG
 ```
+
+## Kubernetes
+
+...
 
 ## Continuous Integration and Continuous Delivery
 
