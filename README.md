@@ -14,23 +14,23 @@ df["price_increase"] = (df["close"] > df["open"]).astype(int)
 
 - CI scripts not yet implemented.
 - Refactor `pipeline_dev.py` to `pipeline.py` (`pipeline-training`) and update
-    `Dockerfile`.
+  `Dockerfile`.
 
 ## DevOps
 
 1. Setup DevOps local environment:
-    1. Git
-    2. Virtual Environment
-    3. Setup files such as `pyproject.toml`, `setup.cfg`, `requirements.txt`,
-       `Makefile`, `Dockerfile`, `docker-compose.yml`, `README.md`, etc. This
-       can be set up using scripts.
-    4. Styling/Formatter/Linter
-    5. Logging with Rich (Monitoring locally). Important to have! See logger
-       class.
-    6. Pre-commit hooks
-    7. Pytest
-    8. Documentation
-    9. Model serving
+   1. Git
+   2. Virtual Environment
+   3. Setup files such as `pyproject.toml`, `setup.cfg`, `requirements.txt`,
+      `Makefile`, `Dockerfile`, `docker-compose.yml`, `README.md`, etc. This
+      can be set up using scripts.
+   4. Styling/Formatter/Linter
+   5. Logging with Rich (Monitoring locally). Important to have! See logger
+      class.
+   6. Pre-commit hooks
+   7. Pytest
+   8. Documentation
+   9. Model serving
 2. The steps in 1. should be reproduced via `Makefile`.
 3. CI/CD: Currently just setup github actions to test the above workflows.
 
@@ -39,8 +39,6 @@ df["price_increase"] = (df["close"] > df["open"]).astype(int)
 Nest the unit, integration tests section under this section.
 
 ```bash
-#!/bin/bash
-
 #!/bin/bash
 
 FOLDERS=(
@@ -560,14 +558,14 @@ This command is creating an Autopilot cluster in GKE.
 
 - `--project "gao-hongnan"` sets the GCP project to use.
 - `clusters create-auto "autopilot-cluster-1"` creates an Autopilot cluster
-    named `autopilot-cluster-1`.
+  named `autopilot-cluster-1`.
 - `--region "us-central1"` specifies the region where the cluster will be
-    created.
+  created.
 - `--release-channel "regular"` specifies the release channel for the cluster.
 - `--network` and `--subnetwork` are specifying the network and subnetwork for
-    the cluster.
+  the cluster.
 - `--cluster-ipv4-cidr "/17"` and `--services-ipv4-cidr "/22"` are specifying
-    the IP address ranges for the cluster and the services within the cluster.
+  the IP address ranges for the cluster and the services within the cluster.
 
 Remember to replace the project name and other parameters with your specific
 values.
@@ -714,56 +712,56 @@ This YAML file is a Kubernetes configuration that defines a `CronJob`. Let's
 break down its structure:
 
 - `apiVersion`: Specifies the version of the Kubernetes API that you're using
-    to create this object.
+  to create this object.
 
 - `kind`: Specifies the kind of resource you're creating. In this case, it's a
-    `CronJob`, which is a job that runs on a regular schedule.
+  `CronJob`, which is a job that runs on a regular schedule.
 
 - `metadata`: Specifies metadata about the object, such as its name and
-    labels.
+  labels.
 
 - `spec`: Specifies the detailed configuration of the object. This can include
-    a wide variety of settings, and it's where most of the configuration
-    happens.
+  a wide variety of settings, and it's where most of the configuration
+  happens.
 
   - `schedule`: Specifies the schedule for the job in Cron format. In this
-        case, it's set to run every 2 minutes.
+    case, it's set to run every 2 minutes.
 
   - `jobTemplate`: Specifies the template for the job, which includes the
-        specification for the Pod that the job runs in.
+    specification for the Pod that the job runs in.
 
     - `spec`: The specification for the Pod. This includes the containers
-            that the Pod runs, their environment variables, and any volumes that
-            they use.
+      that the Pod runs, their environment variables, and any volumes that
+      they use.
 
       - `containers`: The list of containers to run in the Pod. Each
-                container includes:
+        container includes:
 
         - `name`: The name of the container.
 
         - `image`: The image to use for the container.
 
         - `imagePullPolicy`: The policy for pulling the image. This
-                    can be `Always`, `Never`, or `IfNotPresent`. In this case,
-                    it's set to `Always`, so the image is pulled every time the
-                    Pod starts.
+          can be `Always`, `Never`, or `IfNotPresent`. In this case,
+          it's set to `Always`, so the image is pulled every time the
+          Pod starts.
 
         - `env`: The environment variables for the container. Each
-                    environment variable includes a name and a value, which can
-                    be a literal value or a reference to a value stored in a
-                    ConfigMap or a Secret.
+          environment variable includes a name and a value, which can
+          be a literal value or a reference to a value stored in a
+          ConfigMap or a Secret.
 
         - `volumeMounts`: Specifies where to mount volumes in the
-                    container's file system.
+          container's file system.
 
       - `volumes`: The volumes that the Pod uses. Each volume includes a
-                name and a source, which can be a literal value or a reference
-                to a value stored in a Secret, a ConfigMap, a
-                PersistentVolumeClaim, or another type of volume source.
+        name and a source, which can be a literal value or a reference
+        to a value stored in a Secret, a ConfigMap, a
+        PersistentVolumeClaim, or another type of volume source.
 
       - `restartPolicy`: Specifies the Pod's restart policy. In the
-                event of a failure, this is set to `OnFailure`, so the Pod will
-                be restarted.
+        event of a failure, this is set to `OnFailure`, so the Pod will
+        be restarted.
 
 If you have applied this configuration correctly, Kubernetes will create a new
 `CronJob` resource according to these specifications.
@@ -796,47 +794,47 @@ Here are the steps for what you can do next:
    or in general `kubectl describe pods` to check some errors especially if your
    CronJob is not running. Can watch your progress like
 
-    ```markdown
-    Events: Type Reason Age From Message ---- ------ ---- ---- ------- Normal
-    Scheduled 11s gke.io/optimize-utilization-scheduler Successfully assigned
-    default/dataops-cronjob-28130878-qtbxd to
-    gk3-autopilot-cluster-1-pool-1-ffa4a760-q5lt Normal Pulling 2s kubelet
-    Pulling image
-    "us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:f7e1be0867bf7d8af67fd0f0da6b6fdb8b7e4346"
-    ```
+   ```markdown
+   Events: Type Reason Age From Message ---- ------ ---- ---- ------- Normal
+   Scheduled 11s gke.io/optimize-utilization-scheduler Successfully assigned
+   default/dataops-cronjob-28130878-qtbxd to
+   gk3-autopilot-cluster-1-pool-1-ffa4a760-q5lt Normal Pulling 2s kubelet
+   Pulling image
+   "us-west2-docker.pkg.dev/gao-hongnan/thebareops/pipeline-dataops:f7e1be0867bf7d8af67fd0f0da6b6fdb8b7e4346"
+   ```
 
 1. **Check the status of your CronJob**: You can use the `kubectl get cronjobs`
    command to list the CronJobs in the current namespace. The output should show
    the status of your CronJob including the last schedule time.
 
-    ```bash
-    kubectl get cronjobs
-    ```
+   ```bash
+   kubectl get cronjobs
+   ```
 
 2. **View the Job created by the CronJob**: Once the CronJob has been triggered
    according to its schedule, it creates a Job. You can use `kubectl get jobs`
    to view the jobs that have been created. You can also use
    `kubectl describe job <job-name>` to view more details about a specific Job.
 
-    ```bash
-    kubectl get jobs
-    kubectl describe job <job-name>
-    ```
+   ```bash
+   kubectl get jobs
+   kubectl describe job <job-name>
+   ```
 
 3. **View the logs of the Pods created by the Job**: Each Job creates one or
    more Pods to execute the task. You can use `kubectl get pods` to view the
    Pods and `kubectl logs <pod-name>` to view the logs of a specific Pod.
 
-    ```bash
-    kubectl get pods
-    kubectl logs <pod-name>
-    ```
+   ```bash
+   kubectl get pods
+   kubectl logs <pod-name>
+   ```
 
-    or if you want to monitor real time if the job is long.
+   or if you want to monitor real time if the job is long.
 
-    ```bash
-    kubectl logs -f <pod-name>
-    ```
+   ```bash
+   kubectl logs -f <pod-name>
+   ```
 
 4. **Check the result of your data pipeline**: Depending on what your data
    pipeline does, you might want to check the result. For example, if your data
@@ -901,3 +899,73 @@ which can help you improve the efficiency of your Kubernetes workflows.
 
 The folder structure of the mock dataops pipeline (without additional packages
 like airbyte or dbt).
+
+## MLOps: Continuous delivery and automation pipelines in machine learning
+
+[Reference](https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning)
+
+The terminology of "Orchestrated Experiment" and "Automated Pipeline" in
+Google's MLOps diagram refers to different stages of a machine learning project.
+
+Orchestrated Experiment: This stage typically occurs in a development or
+experimental setting. Here, data scientists or machine learning engineers are
+exploring different models, feature engineering strategies, and hyperparameters
+to find the most effective solution for the problem at hand. The steps in this
+stage, while methodical, often involve trial and error, exploration, and
+backtracking. Orchestrating these experiments means organizing and managing them
+in a systematic way, often using tools such as notebooks (e.g., Jupyter),
+experiment tracking tools (e.g., MLflow, TensorBoard), version control (e.g.,
+Git), and data versioning tools (e.g., DVC).
+
+Automated Pipeline: Once an effective solution has been found in the experiment
+stage, the next step is to automate this solution so that it can be run
+repeatedly and reliably. This involves translating the experimental code into a
+production-grade pipeline, which includes not only the model training code, but
+also data extraction, preprocessing, validation, model serving, and monitoring.
+This pipeline is typically set up to run automatically, either on a regular
+schedule or in response to certain triggers. The purpose of automation is to
+ensure consistency, efficiency, and reliability. It allows the machine learning
+solution to operate at scale and in real-world environments.
+
+Essentially, the orchestrated experiment stage is about finding the best
+solution, while the automated pipeline stage is about deploying and operating
+that solution at scale. Both stages involve similar steps (like data validation,
+data preparation, model training, model evaluation, and model validation), but
+the context and objectives are different.
+
+---
+
+I think it dawned upon me after re-reading mlops diagram from google.
+
+They have two components, one is exp/dev environment where ml engineers offline
+extract data to somewhere for data analysis. Subsequently, google boxed the
+follow five steps under "orchestrated experiment".
+
+- data validation
+- data preparation
+- model training
+- model evaluation
+- model validation
+
+Then they point this boxed area to another box called source code and point it
+to another box called source repository. Subsequently, they point this source
+repository to another box called pipeline deployment. The key is now this
+pipeline deployment cross over to the second component, namely the
+staging/production environment. Let me detail the box in the staging/production
+environment.
+
+The box is called "automated pipeline" where it contains the following steps:
+
+- data extraction (here i see an arrow from a data warehouse/feature store)
+- data validation
+- data preparation
+- model training
+- model evaluation
+- model validation
+
+then this pipeline goes to model registry to CD: model serving.
+
+What I did wrong with the dvc is that I included the dvc add and push in the
+production environment. This is wrong. The dvc add and push should be done in
+the exp/dev environment. The dvc pull should be done in the production
+environment.
