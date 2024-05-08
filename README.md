@@ -1,5 +1,48 @@
 # The BareOps
 
+- [The BareOps](#the-bareops)
+  - [TODOs](#todos)
+  - [DevOps](#devops)
+    - [Tests](#tests)
+    - [Code Formatting](#code-formatting)
+    - [Linting](#linting)
+    - [Unit Testing](#unit-testing)
+    - [Static Type Checking](#static-type-checking)
+    - [Integration Testing](#integration-testing)
+    - [System Testing](#system-testing)
+  - [Performance Testing/Benchmarking](#performance-testingbenchmarking)
+    - [Model Validation](#model-validation)
+    - [Security Checks](#security-checks)
+    - [Code Complexity Measurement](#code-complexity-measurement)
+    - [Documentation Building and Testing](#documentation-building-and-testing)
+    - [Scripts](#scripts)
+    - [Makefile](#makefile)
+  - [DataOps](#dataops)
+  - [MLOps](#mlops)
+  - [Experiment Tracking](#experiment-tracking)
+    - [MLFlow Remote Tracking Server](#mlflow-remote-tracking-server)
+    - [Method 1. GCP VM](#method-1-gcp-vm)
+      - [The Model Registry](#the-model-registry)
+      - [Promoter](#promoter)
+  - [SSH](#ssh)
+  - [Set GitHub Secrets and Variables from the Command Line](#set-github-secrets-and-variables-from-the-command-line)
+    - [Setting GitHub Secrets](#setting-github-secrets)
+    - [Setting GitHub Actions Environment Variables](#setting-github-actions-environment-variables)
+  - [Containerization](#containerization)
+    - [Common Best Practices](#common-best-practices)
+  - [Kubernetes](#kubernetes)
+    - [Create a Kubernetes Cluster](#create-a-kubernetes-cluster)
+    - [Authenticate the Cluster](#authenticate-the-cluster)
+    - [Verify the Cluster](#verify-the-cluster)
+    - [Create a ConfigMap](#create-a-configmap)
+    - [Create a Secret](#create-a-secret)
+    - [Mount the ConfigMap and Secret in a CronJob Manifest](#mount-the-configmap-and-secret-in-a-cronjob-manifest)
+    - [Debugging](#debugging)
+    - [Watch the CronJob in Action](#watch-the-cronjob-in-action)
+    - [Set Kubernetes Secrets from the Command Line](#set-kubernetes-secrets-from-the-command-line)
+      - [Setting Kubernetes Secrets](#setting-kubernetes-secrets)
+  - [MLOps: Continuous delivery and automation pipelines in machine learning](#mlops-continuous-delivery-and-automation-pipelines-in-machine-learning)
+
 ![MLOps](mlops.gif)
 
 This pipeline does not care about model performance, one should realise
@@ -171,111 +214,6 @@ make create_repo_template
 4. Deploy to Google Kubernetes Engine (GKE) and run the pipeline on `CronJob`.
 
 ## MLOps
-
-### Local Development/Experimentation
-
-Extract data from BigQuery to local environment. Note here the data is
-transformed by dbt and pushed to BigQuery. This transform is not the same as the
-transform in the preprocessing step of machine learning. This transform is just
-to make the data agnostic to downstream tasks such as machine learning.
-
-### Reproducibility
-
-To ensure that your machine learning experiments are reproducible, you should
-keep track of the following components:
-
-1. **Code**
-2. **Data**
-3. **Model config, artifacts and metadata**
-
-#### 1. Code versioning
-
-Use a version control system like **Git** to keep track of your codebase. Git
-allows you to track changes in your code over time and manage different
-versions. To log the exact commit hash of your codebase when logging your MLflow
-run, you can use the following code snippet:
-
-```python
-import subprocess
-
-commit_hash = (
-    subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("utf-8").strip()
-)
-mlflow.log_param("commit_hash", commit_hash)
-```
-
-By logging the commit hash, you can always refer back to the exact version of
-the code used for a specific run, ensuring reproducibility.
-
-#### 2. Data versioning
-
-For data versioning, you can use a tool like **DVC (Data Version Control)**. DVC
-is designed to handle large data files, models, and metrics, and it integrates
-well with Git. DVC helps you track changes in your data files and manage
-different versions.
-
-When you start a new MLflow run, log the DVC version or metadata of the input
-data used in the experiment. This way, you can always retrieve the exact version
-of the data used for a specific run, ensuring reproducibility.
-
-See:
-
-- [Data Management Tutorial](https://dvc.org/doc/start/data-management)
-
-Important points:
-
-- gitignore will be created automatically in data folder once you dvc add.
-- After successfully pushing the data to remote, how do you "retrieve them"?
-- If you are in the same repository, you can just pull the data from remote.
-
-Yes, the idea is to use dvc checkout to switch between different versions of
-your data files, as tracked by DVC. When you use dvc checkout, you provide a Git
-commit hash or tag. DVC will then update your working directory with the data
-files that were tracked at that specific Git commit.
-
-Here are the steps to use dvc checkout with a Git commit hash:
-
-Make sure you have the latest version of your repository and DVC remote by
-running git pull and dvc pull.
-
-Switch to the desired Git commit by running git checkout `<commit-hash>`.
-
-Run dvc checkout to update your data files to the version tracked at the
-specified commit.
-
-Remember that dvc checkout only updates the data files tracked by DVC. To switch
-between code versions, you'll still need to use git checkout.
-
-```bash
-git checkout <commit_hash>
-dvc checkout # in this commit hash
-dvc pull
-```
-
-#### 3. Model artifacts and metadata
-
-You have already logged the artifacts (model, vectorizer, config, log files)
-using `mlflow.log_artifact()`. You can also log additional metadata related to
-the artifacts as you have done with additional_metadata. This should be
-sufficient for keeping track of the artifacts associated with each run.
-
-By combining code versioning with Git, data versioning with DVC, and logging
-artifacts and metadata with MLflow, you can ensure that your machine learning
-experiments are reproducible. This makes it easier to share your work,
-collaborate with others, and build upon your experiments over time.
-
-#### Recovering a run
-
-1. Check the commit hashes for the code and data used in the run.
-2. Checkout the code and data versions using the commit hashes.
-
-```bash
-git checkout <commit_hash>
-pip install -r requirements.txt
-python main.py train
-# once done
-git checkout main
-```
 
 ## Experiment Tracking
 
